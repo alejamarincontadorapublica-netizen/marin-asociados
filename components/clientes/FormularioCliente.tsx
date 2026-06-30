@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import SelectorMunicipios from "./SelectorMunicipios";
 
 type Cliente = {
   id?: string;
@@ -13,6 +14,7 @@ type Cliente = {
   regimen: "ordinario" | "simple";
   ciiu: string;
   municipio: string;
+  municipios_ica: string[];
   plan: "base" | "metodo_marin" | "firma_premium";
   factura_aiu: boolean;
   porcentaje_aiu: string;
@@ -20,7 +22,7 @@ type Cliente = {
 
 const vacío: Cliente = {
   nombre: "", tipo: "empresa", nit: "", cedula: "", cedula_rl: "",
-  regimen: "ordinario", ciiu: "", municipio: "",
+  regimen: "ordinario", ciiu: "", municipio: "", municipios_ica: [],
   plan: "base", factura_aiu: false, porcentaje_aiu: "",
 };
 
@@ -77,7 +79,7 @@ export default function FormularioCliente({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
 
-  const set = (campo: keyof Cliente) => (valor: string | boolean) =>
+  const set = (campo: keyof Cliente) => (valor: string | boolean | string[]) =>
     setForm((f) => ({ ...f, [campo]: valor }));
 
   async function handleSubmit(e: React.FormEvent) {
@@ -100,6 +102,7 @@ export default function FormularioCliente({
       regimen:        form.regimen,
       ciiu:           form.ciiu.trim() || null,
       municipio:      form.municipio.trim() || null,
+      municipios_ica: form.municipios_ica,
       plan:           form.plan,
       factura_aiu:    form.factura_aiu,
       porcentaje_aiu: form.factura_aiu && form.porcentaje_aiu
@@ -172,18 +175,16 @@ export default function FormularioCliente({
         </div>
 
         {form.tipo === "empresa" && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>NIT</Label>
-                <Input value={form.nit} onChange={set("nit")} placeholder="900123456-7" />
-              </div>
-              <div>
-                <Label>Cédula representante legal</Label>
-                <Input value={form.cedula_rl} onChange={set("cedula_rl")} placeholder="1234567890" />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>NIT</Label>
+              <Input value={form.nit} onChange={set("nit")} placeholder="900123456-7" />
             </div>
-          </>
+            <div>
+              <Label>Cédula representante legal</Label>
+              <Input value={form.cedula_rl} onChange={set("cedula_rl")} placeholder="1234567890" />
+            </div>
+          </div>
         )}
 
         {form.tipo === "natural" && (
@@ -213,13 +214,30 @@ export default function FormularioCliente({
           </div>
           <div>
             <Label>Código CIIU (actividad económica)</Label>
-            <Input value={form.ciiu} onChange={set("ciiu")} placeholder="Ej. 6920" />
+            <Input value={form.ciiu} onChange={set("ciiu")} placeholder="Ej. 4111" />
           </div>
         </div>
 
         <div>
-          <Label>Municipio (para ICA)</Label>
-          <Input value={form.municipio} onChange={set("municipio")} placeholder="Ej. Bogotá, Medellín, Cali..." />
+          <Label>Municipio de registro (cámara de comercio)</Label>
+          <Input
+            value={form.municipio}
+            onChange={set("municipio")}
+            placeholder="Municipio donde está matriculado el establecimiento"
+          />
+        </div>
+
+        <div>
+          <Label>Municipios donde declara ICA</Label>
+          <SelectorMunicipios
+            municipios={form.municipios_ica}
+            onChange={(v) => set("municipios_ica")(v)}
+          />
+          {form.municipios_ica.length > 0 && (
+            <p className="text-xs mt-1" style={{ color: "#9A9281" }}>
+              {form.municipios_ica.length} municipio{form.municipios_ica.length > 1 ? "s" : ""} registrado{form.municipios_ica.length > 1 ? "s" : ""}
+            </p>
+          )}
         </div>
       </div>
 

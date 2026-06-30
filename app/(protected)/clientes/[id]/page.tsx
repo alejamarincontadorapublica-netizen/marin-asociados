@@ -12,7 +12,7 @@ export default async function DetalleClientePage({ params }: { params: Params })
 
   const { data: cliente, error } = await supabase
     .from("clientes")
-    .select("*")
+    .select("*, municipios_ica")
     .eq("id", id)
     .single();
 
@@ -72,11 +72,11 @@ export default async function DetalleClientePage({ params }: { params: Params })
       </div>
 
       {/* Resumen rápido */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         {[
           { label: "Identificación", valor: cliente.tipo === "empresa" ? (cliente.nit ?? "—") : (cliente.cedula ?? "—") },
           { label: "CIIU",           valor: cliente.ciiu ?? "—" },
-          { label: "Municipio",      valor: cliente.municipio ?? "—" },
+          { label: "Registro (C.C.)",valor: cliente.municipio ?? "—" },
           { label: "Representante",  valor: cliente.cedula_rl ?? "—" },
         ].map((item) => (
           <div
@@ -89,6 +89,30 @@ export default async function DetalleClientePage({ params }: { params: Params })
           </div>
         ))}
       </div>
+
+      {/* Municipios ICA */}
+      {cliente.municipios_ica && cliente.municipios_ica.length > 0 && (
+        <div
+          className="rounded-xl border p-4 mb-6"
+          style={{ backgroundColor: "#FFFFFF", borderColor: "#E8E1D4" }}
+        >
+          <p className="text-xs font-medium mb-2" style={{ color: "#9A9281" }}>
+            Municipios donde declara ICA ({cliente.municipios_ica.length})
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {cliente.municipios_ica.map((m: string) => (
+              <span
+                key={m}
+                className="px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{ backgroundColor: "#F5EEDF", color: "#9A7223" }}
+              >
+                {m}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {/* Formulario de edición */}
       <div
@@ -117,6 +141,7 @@ export default async function DetalleClientePage({ params }: { params: Params })
           regimen:        cliente.regimen,
           ciiu:           cliente.ciiu ?? "",
           municipio:      cliente.municipio ?? "",
+          municipios_ica: cliente.municipios_ica ?? [],
           plan:           cliente.plan,
           factura_aiu:    cliente.factura_aiu ?? false,
           porcentaje_aiu: cliente.porcentaje_aiu?.toString() ?? "",
