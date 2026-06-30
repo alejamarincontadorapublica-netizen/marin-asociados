@@ -12,7 +12,7 @@ export default async function DetalleClientePage({ params }: { params: Params })
 
   const { data: cliente, error } = await supabase
     .from("clientes")
-    .select("*, municipios_ica")
+    .select("*")
     .eq("id", id)
     .single();
 
