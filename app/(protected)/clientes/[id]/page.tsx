@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import FormularioCliente from "@/components/clientes/FormularioCliente";
 import BotonEliminarCliente from "@/components/clientes/BotonEliminarCliente";
+import SeccionDocumentosDIAN from "@/components/facturacion/SeccionDocumentosDIAN";
 
 type Params = Promise<{ id: string }>;
 
@@ -17,6 +18,24 @@ export default async function DetalleClientePage({ params }: { params: Params })
     .single();
 
   if (error || !cliente) notFound();
+
+  // Conteo de documentos para el resumen rápido
+  const { count: totalDocs } = await supabase
+    .from("documentos")
+    .select("*", { count: "exact", head: true })
+    .eq("cliente_id", id);
+
+  const { count: emitidosDocs } = await supabase
+    .from("documentos")
+    .select("*", { count: "exact", head: true })
+    .eq("cliente_id", id)
+    .eq("grupo", "Emitido");
+
+  const { count: recibidosDocs } = await supabase
+    .from("documentos")
+    .select("*", { count: "exact", head: true })
+    .eq("cliente_id", id)
+    .eq("grupo", "Recibido");
 
   const planEtiqueta: Record<string, string> = {
     base: "Base",
@@ -113,6 +132,15 @@ export default async function DetalleClientePage({ params }: { params: Params })
         </div>
       )}
 
+
+      {/* Documentos DIAN */}
+      <SeccionDocumentosDIAN
+        clienteId={cliente.id}
+        clienteNombre={cliente.nombre}
+        totalDocs={totalDocs ?? 0}
+        emitidos={emitidosDocs ?? 0}
+        recibidos={recibidosDocs ?? 0}
+      />
 
       {/* Formulario de edición */}
       <div

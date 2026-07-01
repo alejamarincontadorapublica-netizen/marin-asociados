@@ -1,101 +1,106 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { clasificarDocumento, parsearValor } from "@/lib/reglas-tributarias";
+import * as XLSX from "xlsx";
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient();
 
   try {
-    const formData    = await request.formData();
-    const clienteId   = formData.get("cliente_id") as string;
-    const emitidosXls = formData.get("emitidos") as File | null;
-    const recibidosXls = formData.get("recibidos") as File | null;
+    const formData      = await request.formData();
+    const clienteId     = formData.get("cliente_id") as string;
+    const emitidosFile  = formData.get("emitidos")  as File | null;
+    const recibidosFile = formData.get("recibidos") as File | null;
 
     if (!clienteId) {
       return NextResponse.json({ error: "Falta el cliente." }, { status: 400 });
     }
 
-    // Obtener datos del cliente (AIU, porcentaje)
-    const { data: cliente } = await supabase
-      .from("clientes")
-      .select("factura_aiu, porcentaje_aiu")
-      .eq("id", clienteId)
-      .single();
-
     const documentos: Record<string, unknown>[] = [];
 
-    // Parsear CSV/TSV exportado de Excel como texto
-    async function procesarArchivo(archivo: File, grupo: "Emitido" | "Recibido") {
-      const texto = await archivo.text();
-      const lineas = texto.split(/\r?\n/).filter((l) => l.trim());
-      if (lineas.length < 2) return;
+    async function procesarExcel(archivo: File, grupo: "Emitido" | "Recibido") {
+      const buffer   = await archivo.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+      const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+      const filas    = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+        defval: null,
+        blankrows: false,
+      });
+      if (filas.length === 0) return;
 
-      const encabezados = lineas[0].split("\t").map((h) => h.trim());
-      const iTipo  = encabezados.findIndex((h) => h.toLowerCase().includes("tipo de documento"));
-      const iIva   = encabezados.findIndex((h) => h.toLowerCase() === "iva");
-      const iBase  = encabezados.findIndex((h) => h.toLowerCase() === "base");
-      const iTotal = encabezados.findIndex((h) => h.toLowerCase() === "total");
-      const iCufe  = encabezados.findIndex((h) => h.toLowerCase().includes("cufe") || h.toLowerCase().includes("cude"));
-      const iFecha = encabezados.findIndex((h) => h.toLowerCase().includes("fecha"));
-      const iNit   = encabezados.findIndex((h) => h.toLowerCase().includes("nit"));
-      const iNombre = encabezados.findIndex((h) => h.toLowerCase().includes("nombre") || h.toLowerCase().includes("razón"));
+      // Detectar columnas por nombre (la DIAN varía mayúsculas y acentos)
+      const claves = Object.keys(filas[0]);
+      const col    = (pat: RegExp) => claves.find((k) => pat.test(k)) ?? null;
 
-      for (let i = 1; i < lineas.length; i++) {
-        const cols = lineas[i].split("\t");
-        const tipoDoc = iTipo >= 0 ? (cols[iTipo] ?? "").trim() : "";
+      const cTipo   = col(/tipo\s*de\s*documento/i);
+      const cIva    = col(/^iva$/i);
+      const cBase   = col(/^base$/i);
+      const cTotal  = col(/^total$/i);
+      const cCufe   = col(/cufe|cude/i);
+      const cFecha  = col(/fecha/i);
+      const cNit    = col(/nit/i);
+      const cNombre = col(/nombre|raz[oó]n/i);
+
+      for (const fila of filas) {
+        const tipoDoc = cTipo ? String(fila[cTipo] ?? "").trim() : "";
         if (!tipoDoc) continue;
 
         const clasificacion = clasificarDocumento(tipoDoc);
-        const iva   = parsearValor(iIva  >= 0 ? cols[iIva]  : 0);
-        const base  = parsearValor(iBase >= 0 ? cols[iBase] : 0);
-        const total = parsearValor(iTotal >= 0 ? cols[iTotal] : 0);
+        const iva    = parsearValor(cIva   ? fila[cIva]   : 0);
+        const base   = parsearValor(cBase  ? fila[cBase]  : 0);
+        const total  = parsearValor(cTotal ? fila[cTotal] : 0);
+        const cufe   = cCufe   ? (String(fila[cCufe]  ?? "").trim() || null) : null;
+        const nit    = cNit    ? (String(fila[cNit]   ?? "").trim() || null) : null;
+        const nombre = cNombre ? (String(fila[cNombre]?? "").trim() || null) : null;
+        const fecha  = parsearFecha(cFecha ? fila[cFecha] : null);
 
         documentos.push({
           cliente_id:     clienteId,
           tipo_documento: tipoDoc,
           grupo,
-          cufe:           iCufe  >= 0 ? (cols[iCufe]  ?? "").trim() : null,
-          fecha_emision:  iFecha >= 0 ? parsearFecha(cols[iFecha]) : null,
-          nit_emisor:     iNit   >= 0 ? (cols[iNit]   ?? "").trim() : null,
-          nombre_emisor:  iNombre >= 0 ? (cols[iNombre] ?? "").trim() : null,
+          cufe,
+          fecha_emision:  fecha,
+          nit_emisor:     nit,
+          nombre_emisor:  nombre,
           base,
           iva,
           total,
           clasificacion,
-          deducible: clasificacion === "IGNORAR" ? null :
-                     clasificacion === "FACTURA" ? "deducible" : "deducible",
+          deducible: clasificacion === "IGNORAR" ? "no_deducible" : "deducible",
         });
       }
     }
 
-    if (emitidosXls)  await procesarArchivo(emitidosXls,  "Emitido");
-    if (recibidosXls) await procesarArchivo(recibidosXls, "Recibido");
+    if (emitidosFile)  await procesarExcel(emitidosFile,  "Emitido");
+    if (recibidosFile) await procesarExcel(recibidosFile, "Recibido");
 
     if (documentos.length === 0) {
-      return NextResponse.json({ error: "No se encontraron documentos en los archivos." }, { status: 400 });
+      return NextResponse.json(
+        { error: "No se encontraron documentos. Verifica que sean los archivos Excel exportados desde la DIAN." },
+        { status: 400 }
+      );
     }
 
-    // Guardar en Supabase (upsert por CUFE para evitar duplicados)
-    const { error: insertError } = await supabase
-      .from("documentos")
-      .upsert(documentos, { onConflict: "cufe", ignoreDuplicates: false });
+    // Upsert los que tienen CUFE (evita duplicados al volver a subir el mismo periodo)
+    const conCufe = documentos.filter((d) => d.cufe);
+    const sinCufe = documentos.filter((d) => !d.cufe);
 
-    if (insertError) {
-      // Si falla upsert por constraint, intentar insert ignorando duplicados
-      const { error: insertError2 } = await supabase
+    if (conCufe.length > 0) {
+      const { error } = await supabase
         .from("documentos")
-        .insert(documentos);
-      if (insertError2) {
-        return NextResponse.json({ error: insertError2.message }, { status: 500 });
-      }
+        .upsert(conCufe, { onConflict: "cufe", ignoreDuplicates: false });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (sinCufe.length > 0) {
+      const { error } = await supabase.from("documentos").insert(sinCufe);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({
-      ok: true,
-      total: documentos.length,
-      emitidos:  documentos.filter((d) => d.grupo === "Emitido").length,
-      recibidos: documentos.filter((d) => d.grupo === "Recibido").length,
-      cliente_aiu: cliente?.factura_aiu ?? false,
+      ok:       true,
+      total:    documentos.length,
+      emitidos: documentos.filter((d) => d.grupo === "Emitido").length,
+      recibidos:documentos.filter((d) => d.grupo === "Recibido").length,
     });
 
   } catch (err) {
@@ -103,15 +108,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function parsearFecha(valor: string | undefined): string | null {
+function parsearFecha(valor: unknown): string | null {
   if (!valor) return null;
-  const v = valor.trim();
-  // Formato DD/MM/YYYY
-  const m = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-  if (m) {
-    const [, d, mo, a] = m;
-    const año = a.length === 2 ? "20" + a : a;
-    return `${año}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  if (valor instanceof Date) return valor.toISOString().slice(0, 10);
+  const v = String(valor).trim();
+  const m1 = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m1) {
+    const [, d, mo, a] = m1;
+    return `${a.length === 2 ? "20" + a : a}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
+  const m2 = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m2) return `${m2[1]}-${m2[2]}-${m2[3]}`;
   return null;
 }
