@@ -91,7 +91,7 @@ export default function Sidebar() {
         className="px-4 py-3 border-t text-xs"
         style={{ borderColor: "#2A261F", color: "#6B4F2A" }}
       >
-        Sistema v0.1 · Capa 0
+        Sistema v0.2 · Capa 2
       </div>
     </aside>
   );
