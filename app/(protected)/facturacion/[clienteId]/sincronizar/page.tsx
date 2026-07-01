@@ -51,7 +51,12 @@ export default async function SincronizarPage({ params }: { params: Params }) {
             prorrateo del {cliente.porcentaje_aiu}% automáticamente.
           </div>
         )}
-        <SubirExcelDIAN clienteId={clienteId} clienteNombre={cliente.nombre} />
+        <SubirExcelDIAN
+          clienteId={clienteId}
+          clienteNombre={cliente.nombre}
+          facturaAiu={cliente.factura_aiu ?? false}
+          porcentajeAiuDefecto={cliente.porcentaje_aiu ?? null}
+        />
       </div>
     </div>
   );

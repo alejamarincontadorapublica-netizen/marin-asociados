@@ -11,6 +11,8 @@ export async function POST(request: NextRequest) {
     const clienteId     = formData.get("cliente_id") as string;
     const emitidosFile  = formData.get("emitidos")  as File | null;
     const recibidosFile = formData.get("recibidos") as File | null;
+    const aiuStr        = formData.get("aiu_porcentaje") as string | null;
+    const aiuPorcentaje = aiuStr ? parseFloat(aiuStr) : null;
 
     if (!clienteId) {
       return NextResponse.json({ error: "Falta el cliente." }, { status: 400 });
@@ -66,7 +68,8 @@ export async function POST(request: NextRequest) {
           iva,
           total,
           clasificacion,
-          deducible: clasificacion === "IGNORAR" ? "no_deducible" : "deducible",
+          deducible:      clasificacion === "IGNORAR" ? "no_deducible" : "deducible",
+          aiu_porcentaje: aiuPorcentaje,
         });
       }
     }

@@ -140,6 +140,8 @@ export default async function DetalleClientePage({ params }: { params: Params })
         totalDocs={totalDocs ?? 0}
         emitidos={emitidosDocs ?? 0}
         recibidos={recibidosDocs ?? 0}
+        facturaAiu={cliente.factura_aiu ?? false}
+        porcentajeAiu={cliente.porcentaje_aiu ?? null}
       />
 
       {/* Formulario de edición */}

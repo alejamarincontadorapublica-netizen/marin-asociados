@@ -11,12 +11,16 @@ export default function SeccionDocumentosDIAN({
   totalDocs,
   emitidos,
   recibidos,
+  facturaAiu = false,
+  porcentajeAiu,
 }: {
   clienteId: string;
   clienteNombre: string;
   totalDocs: number;
   emitidos: number;
   recibidos: number;
+  facturaAiu?: boolean;
+  porcentajeAiu?: number | null;
 }) {
   const router = useRouter();
   const [mostrarSubida, setMostrarSubida] = useState(false);
@@ -86,6 +90,8 @@ export default function SeccionDocumentosDIAN({
           <SubirExcelDIAN
             clienteId={clienteId}
             clienteNombre={clienteNombre}
+            facturaAiu={facturaAiu}
+            porcentajeAiuDefecto={porcentajeAiu}
             onExito={handleExito}
           />
         </div>
