@@ -81,16 +81,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert los que tienen CUFE (evita duplicados al volver a subir el mismo periodo)
     const conCufe = documentos.filter((d) => d.cufe);
     const sinCufe = documentos.filter((d) => !d.cufe);
 
     if (conCufe.length > 0) {
-      const { error } = await supabase
+      // Intentar upsert; si no existe el constraint único, eliminar duplicados y luego insertar
+      const { error: upsertError } = await supabase
         .from("documentos")
         .upsert(conCufe, { onConflict: "cufe", ignoreDuplicates: false });
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      if (upsertError) {
+        // El constraint único no existe aún — borrar los que ya existan con esos CUFEs e insertar
+        const cufesNuevos = conCufe.map((d) => d.cufe as string);
+        await supabase
+          .from("documentos")
+          .delete()
+          .eq("cliente_id", clienteId)
+          .in("cufe", cufesNuevos);
+
+        const { error: insertError } = await supabase.from("documentos").insert(conCufe);
+        if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+      }
     }
+
     if (sinCufe.length > 0) {
       const { error } = await supabase.from("documentos").insert(sinCufe);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
