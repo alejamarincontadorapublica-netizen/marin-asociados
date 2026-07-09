@@ -9,9 +9,9 @@ const periodicidadEtiqueta: Record<string, string> = {
 export default async function ImpuestosPage() {
   const supabase = await createServerSupabaseClient();
 
-  const { data: clientes } = await supabase
+  const { data: clientes, error } = await supabase
     .from("clientes")
-    .select("id, nombre, tipo, nit, cedula, periodicidad_iva")
+    .select("*")
     .order("nombre");
 
   return (
@@ -29,7 +29,12 @@ export default async function ImpuestosPage() {
         className="rounded-xl border overflow-hidden"
         style={{ backgroundColor: "#FFFFFF", borderColor: "#E8E1D4" }}
       >
-        {!clientes || clientes.length === 0 ? (
+        {error ? (
+          <div className="py-16 text-center px-6">
+            <p className="font-serif text-lg mb-2" style={{ color: "#9E4332" }}>Error al cargar clientes</p>
+            <p className="text-sm" style={{ color: "#9E4332" }}>{error.message}</p>
+          </div>
+        ) : !clientes || clientes.length === 0 ? (
           <div className="py-16 text-center">
             <p className="font-serif text-lg mb-2" style={{ color: "#1A1814" }}>No hay clientes</p>
             <p className="text-sm" style={{ color: "#9A9281" }}>
