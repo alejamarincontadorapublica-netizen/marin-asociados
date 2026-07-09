@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { calcularIVA, generarPeriodosFiscales, type Periodicidad } from "@/lib/reglas-tributarias";
 import CertificadosReteIVA, { type CertificadoReteIVA } from "./CertificadosReteIVA";
@@ -46,7 +46,8 @@ export default function LiquidacionIVA({
   const router = useRouter();
   const [anio, setAnio] = useState(anioActual);
   const [periodoIdx, setPeriodoIdx] = useState(0);
-  const [arrastrar, setArrastrar] = useState(true);
+  const [arrastrar, setArrastrar] = useState(false);
+  const [montoArrastreStr, setMontoArrastreStr] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState("");
 
@@ -88,8 +89,22 @@ export default function LiquidacionIVA({
   }, [liquidaciones, periodo]);
 
   const saldoAnterior = liquidacionAnterior?.saldo ?? 0;
-  const hayArrastreDisponible = !!liquidacionAnterior && saldoAnterior < 0;
-  const saldoConArrastre = arrastrar && hayArrastreDisponible ? saldo + saldoAnterior : saldo;
+  const hayArrastreDetectado = !!liquidacionAnterior && saldoAnterior < 0;
+
+  // Al cambiar de periodo, pre-llenar con el saldo a favor detectado por el sistema (si existe)
+  useEffect(() => {
+    if (hayArrastreDetectado) {
+      setArrastrar(true);
+      setMontoArrastreStr(String(Math.abs(saldoAnterior)));
+    } else {
+      setArrastrar(false);
+      setMontoArrastreStr("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodo.inicio, periodo.fin]);
+
+  const montoArrastre = parseFloat(montoArrastreStr) || 0;
+  const saldoConArrastre = arrastrar ? saldo - montoArrastre : saldo;
 
   const certificadosDelPeriodo = useMemo(
     () => certificados.filter((c) => c.periodo_inicio === periodo.inicio && c.periodo_fin === periodo.fin),
@@ -120,7 +135,8 @@ export default function LiquidacionIVA({
         detalle: {
           ...detalle,
           saldo_periodo: saldo,
-          saldo_anterior_arrastrado: arrastrar && hayArrastreDisponible ? saldoAnterior : 0,
+          saldo_anterior_arrastrado: arrastrar ? montoArrastre : 0,
+          saldo_anterior_origen: arrastrar ? (hayArrastreDetectado ? "sistema" : "manual") : null,
           periodo_anterior: liquidacionAnterior
             ? `${liquidacionAnterior.periodo_inicio} a ${liquidacionAnterior.periodo_fin}`
             : null,
@@ -198,32 +214,43 @@ export default function LiquidacionIVA({
       </div>
 
       {/* Arrastre de saldo anterior */}
-      {liquidacionAnterior && (
-        <div
-          className="rounded-xl border p-5 mb-4"
-          style={{ backgroundColor: hayArrastreDisponible ? "#F5EEDF" : "#F0EEEA", borderColor: "#E8D9B8" }}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium" style={{ color: "#1A1814" }}>
-                Periodo anterior ({liquidacionAnterior.periodo_inicio} a {liquidacionAnterior.periodo_fin}):{" "}
-                {saldoAnterior < 0 ? "saldo a favor" : "saldo a pagar"} de {fmt(Math.abs(saldoAnterior))}
+      <div
+        className="rounded-xl border p-5 mb-4"
+        style={{ backgroundColor: "#F5EEDF", borderColor: "#E8D9B8" }}
+      >
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium" style={{ color: "#1A1814" }}>
+              <input type="checkbox" checked={arrastrar} onChange={(e) => setArrastrar(e.target.checked)} />
+              Arrastrar saldo a favor de un periodo anterior
+            </label>
+            {liquidacionAnterior ? (
+              <p className="text-xs mt-1" style={{ color: "#9A9281" }}>
+                {hayArrastreDetectado
+                  ? `El sistema detectó saldo a favor del periodo anterior (${liquidacionAnterior.periodo_inicio} a ${liquidacionAnterior.periodo_fin}) de ${fmt(Math.abs(saldoAnterior))}. Puedes ajustarlo si es necesario.`
+                  : `El periodo anterior liquidado en el sistema (${liquidacionAnterior.periodo_inicio} a ${liquidacionAnterior.periodo_fin}) tuvo saldo a pagar, no a favor. Si igual tienes un saldo a favor de otro periodo (por ejemplo, de antes de usar el sistema), escríbelo abajo.`}
               </p>
-              {!hayArrastreDisponible && (
-                <p className="text-xs mt-1" style={{ color: "#9A9281" }}>
-                  Solo se puede arrastrar saldo a favor (negativo). Un saldo a pagar del periodo anterior ya debió declararse aparte.
-                </p>
-              )}
-            </div>
-            {hayArrastreDisponible && (
-              <label className="flex items-center gap-2 text-sm shrink-0" style={{ color: "#1A1814" }}>
-                <input type="checkbox" checked={arrastrar} onChange={(e) => setArrastrar(e.target.checked)} />
-                Arrastrar al periodo actual
-              </label>
+            ) : (
+              <p className="text-xs mt-1" style={{ color: "#9A9281" }}>
+                Si este cliente tiene saldo a favor de un periodo anterior (incluso de antes de usar el sistema), actívalo y escribe el monto.
+              </p>
             )}
           </div>
+          {arrastrar && (
+            <div className="shrink-0">
+              <label className="block text-xs font-medium mb-1" style={{ color: "#9A9281" }}>Monto a favor a cruzar</label>
+              <input
+                type="number"
+                value={montoArrastreStr}
+                onChange={(e) => setMontoArrastreStr(e.target.value)}
+                placeholder="0"
+                className="w-40 px-3 py-2 rounded-lg text-sm border"
+                style={{ borderColor: "#E8D9B8", color: "#1A1814" }}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <CertificadosReteIVA
         clienteId={clienteId}
