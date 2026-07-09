@@ -175,6 +175,7 @@ export default async function DetalleClientePage({ params }: { params: Params })
           plan:           cliente.plan,
           factura_aiu:    cliente.factura_aiu ?? false,
           porcentaje_aiu: cliente.porcentaje_aiu?.toString() ?? "",
+          periodicidad_iva: cliente.periodicidad_iva ?? "",
         }}
       />
     </div>

@@ -81,3 +81,38 @@ export function parsearValor(valor: unknown): number {
   const num = parseFloat(str);
   return isNaN(num) ? 0 : num;
 }
+
+// ── Periodos fiscales de IVA (Capa 3) ──────────────────────────────
+// Periodos fijos estándar DIAN. Cada cliente declara bimestral o
+// cuatrimestral según su propia periodicidad asignada por la DIAN.
+
+export type Periodicidad = "bimestral" | "cuatrimestral";
+
+export type PeriodoFiscal = { inicio: string; fin: string; etiqueta: string };
+
+const BIMESTRES = [
+  { m1: 1,  m2: 2,  etiqueta: "Enero - Febrero" },
+  { m1: 3,  m2: 4,  etiqueta: "Marzo - Abril" },
+  { m1: 5,  m2: 6,  etiqueta: "Mayo - Junio" },
+  { m1: 7,  m2: 8,  etiqueta: "Julio - Agosto" },
+  { m1: 9,  m2: 10, etiqueta: "Septiembre - Octubre" },
+  { m1: 11, m2: 12, etiqueta: "Noviembre - Diciembre" },
+];
+
+const CUATRIMESTRES = [
+  { m1: 1, m2: 4,  etiqueta: "Enero - Abril" },
+  { m1: 5, m2: 8,  etiqueta: "Mayo - Agosto" },
+  { m1: 9, m2: 12, etiqueta: "Septiembre - Diciembre" },
+];
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const ultimoDiaMes = (anio: number, mes: number) => new Date(anio, mes, 0).getDate();
+
+export function generarPeriodosFiscales(periodicidad: Periodicidad, anio: number): PeriodoFiscal[] {
+  const rangos = periodicidad === "bimestral" ? BIMESTRES : CUATRIMESTRES;
+  return rangos.map((r) => ({
+    inicio: `${anio}-${pad(r.m1)}-01`,
+    fin: `${anio}-${pad(r.m2)}-${pad(ultimoDiaMes(anio, r.m2))}`,
+    etiqueta: `${r.etiqueta} ${anio}`,
+  }));
+}

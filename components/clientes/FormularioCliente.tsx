@@ -18,12 +18,13 @@ type Cliente = {
   plan: "base" | "metodo_marin" | "firma_premium";
   factura_aiu: boolean;
   porcentaje_aiu: string;
+  periodicidad_iva: "" | "bimestral" | "cuatrimestral";
 };
 
 const vacío: Cliente = {
   nombre: "", tipo: "empresa", nit: "", cedula: "", cedula_rl: "",
   regimen: "ordinario", ciiu: "", municipio: "", municipios_ica: [],
-  plan: "base", factura_aiu: false, porcentaje_aiu: "",
+  plan: "base", factura_aiu: false, porcentaje_aiu: "", periodicidad_iva: "",
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => (
@@ -108,6 +109,7 @@ export default function FormularioCliente({
       porcentaje_aiu: form.factura_aiu && form.porcentaje_aiu
                         ? parseFloat(form.porcentaje_aiu)
                         : null,
+      periodicidad_iva: form.periodicidad_iva || null,
     };
 
     const url    = modo === "crear" ? "/api/clientes" : `/api/clientes/${inicial?.id}`;
@@ -216,6 +218,18 @@ export default function FormularioCliente({
             <Label>Código CIIU (actividad económica)</Label>
             <Input value={form.ciiu} onChange={set("ciiu")} placeholder="Ej. 4111" />
           </div>
+        </div>
+
+        <div>
+          <Label>Periodicidad de IVA</Label>
+          <Select value={form.periodicidad_iva} onChange={(v) => set("periodicidad_iva")(v as "" | "bimestral" | "cuatrimestral")}>
+            <option value="">Sin definir</option>
+            <option value="bimestral">Bimestral</option>
+            <option value="cuatrimestral">Cuatrimestral</option>
+          </Select>
+          <p className="text-xs mt-1" style={{ color: "#9A9281" }}>
+            Necesaria para liquidar IVA por periodo en el módulo de Impuestos
+          </p>
         </div>
 
         <div>

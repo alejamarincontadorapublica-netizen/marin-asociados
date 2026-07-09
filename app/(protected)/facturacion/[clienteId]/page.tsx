@@ -34,7 +34,7 @@ export default async function DocumentosClientePage({ params }: { params: Params
       grupo: d.grupo,
       iva: d.iva ?? 0,
       factura_aiu: cliente.factura_aiu ?? false,
-      porcentaje_aiu: cliente.porcentaje_aiu ?? 0,
+      porcentaje_aiu: d.aiu_porcentaje ?? cliente.porcentaje_aiu ?? 0,
     }));
 
   const { iva_generado, iva_descontable, saldo, detalle } =
