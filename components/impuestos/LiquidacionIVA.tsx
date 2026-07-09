@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { calcularIVA, generarPeriodosFiscales, type Periodicidad } from "@/lib/reglas-tributarias";
+import CertificadosReteIVA, { type CertificadoReteIVA } from "./CertificadosReteIVA";
 
 type Documento = {
   fecha_emision: string | null;
@@ -23,6 +24,8 @@ type Liquidacion = {
   created_at: string;
 };
 
+type CertificadoConPeriodo = CertificadoReteIVA & { periodo_inicio: string; periodo_fin: string };
+
 const fmt = (n: number) =>
   "$ " + Math.round(n).toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -30,7 +33,7 @@ const anioActual = new Date().getFullYear();
 const ANIOS = [anioActual - 1, anioActual, anioActual + 1];
 
 export default function LiquidacionIVA({
-  clienteId, periodicidad, facturaAiu, porcentajeAiuDefecto, documentos, liquidaciones,
+  clienteId, periodicidad, facturaAiu, porcentajeAiuDefecto, documentos, liquidaciones, certificados,
 }: {
   clienteId: string;
   periodicidad: Periodicidad;
@@ -38,6 +41,7 @@ export default function LiquidacionIVA({
   porcentajeAiuDefecto: number;
   documentos: Documento[];
   liquidaciones: Liquidacion[];
+  certificados: CertificadoConPeriodo[];
 }) {
   const router = useRouter();
   const [anio, setAnio] = useState(anioActual);
@@ -85,7 +89,15 @@ export default function LiquidacionIVA({
 
   const saldoAnterior = liquidacionAnterior?.saldo ?? 0;
   const hayArrastreDisponible = !!liquidacionAnterior && saldoAnterior < 0;
-  const saldoFinal = arrastrar && hayArrastreDisponible ? saldo + saldoAnterior : saldo;
+  const saldoConArrastre = arrastrar && hayArrastreDisponible ? saldo + saldoAnterior : saldo;
+
+  const certificadosDelPeriodo = useMemo(
+    () => certificados.filter((c) => c.periodo_inicio === periodo.inicio && c.periodo_fin === periodo.fin),
+    [certificados, periodo]
+  );
+  const totalReteIva = certificadosDelPeriodo.reduce((acc, c) => acc + c.monto_retenido, 0);
+
+  const saldoFinal = saldoConArrastre - totalReteIva;
 
   const yaLiquidado = liquidaciones.find(
     (l) => l.periodo_inicio === periodo.inicio && l.periodo_fin === periodo.fin
@@ -112,6 +124,8 @@ export default function LiquidacionIVA({
           periodo_anterior: liquidacionAnterior
             ? `${liquidacionAnterior.periodo_inicio} a ${liquidacionAnterior.periodo_fin}`
             : null,
+          reteiva_total: totalReteIva,
+          reteiva_certificados: certificadosDelPeriodo.length,
         },
       }),
     });
@@ -210,6 +224,13 @@ export default function LiquidacionIVA({
           </div>
         </div>
       )}
+
+      <CertificadosReteIVA
+        clienteId={clienteId}
+        periodoInicio={periodo.inicio}
+        periodoFin={periodo.fin}
+        certificados={certificadosDelPeriodo}
+      />
 
       {/* Saldo final */}
       <div

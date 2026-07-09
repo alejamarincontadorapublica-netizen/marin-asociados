@@ -29,6 +29,25 @@ export default async function ImpuestosClientePage({ params }: { params: Params 
     .eq("tipo", "IVA")
     .order("periodo_inicio", { ascending: false });
 
+  const { data: certificadosRaw } = await supabase
+    .from("certificados_reteiva")
+    .select("*")
+    .eq("cliente_id", clienteId)
+    .order("created_at", { ascending: false });
+
+  const certificados = await Promise.all(
+    (certificadosRaw ?? []).map(async (c) => {
+      let archivo_url_firmada: string | null = null;
+      if (c.archivo_ruta) {
+        const { data: signed } = await supabase.storage
+          .from("reteiva-certificados")
+          .createSignedUrl(c.archivo_ruta, 3600);
+        archivo_url_firmada = signed?.signedUrl ?? null;
+      }
+      return { ...c, archivo_url_firmada };
+    })
+  );
+
   return (
     <div>
       <div className="mb-6">
@@ -70,6 +89,7 @@ export default async function ImpuestosClientePage({ params }: { params: Params 
           porcentajeAiuDefecto={cliente.porcentaje_aiu ?? 0}
           documentos={documentos ?? []}
           liquidaciones={liquidaciones ?? []}
+          certificados={certificados}
         />
       )}
     </div>
