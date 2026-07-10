@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
 
   const {
     cliente_id, periodo_inicio, periodo_fin,
-    iva_generado, iva_descontable, saldo, detalle,
+    iva_generado, iva_descontable, saldo, detalle, es_final,
   } = body;
 
   if (!cliente_id || !periodo_inicio || !periodo_fin) {
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
         iva_descontable,
         saldo,
         detalle,
+        es_final: es_final ?? true,
       }],
       { onConflict: "cliente_id,periodo_inicio,periodo_fin,tipo" }
     )

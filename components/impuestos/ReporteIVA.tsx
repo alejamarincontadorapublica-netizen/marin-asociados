@@ -17,10 +17,11 @@ type Detalle = {
   periodo_anterior?: string | null;
   reteiva_total?: number;
   reteiva_certificados?: number;
+  periodo_oficial_fin?: string;
 } | null;
 
 export default function ReporteIVA({
-  clienteNombre, periodoInicio, periodoFin, ivaGenerado, ivaDescontable, saldoFinal, detalle, fechaLiquidacion,
+  clienteNombre, periodoInicio, periodoFin, ivaGenerado, ivaDescontable, saldoFinal, detalle, fechaLiquidacion, esFinal,
 }: {
   clienteNombre: string;
   periodoInicio: string;
@@ -30,6 +31,7 @@ export default function ReporteIVA({
   saldoFinal: number;
   detalle: Detalle;
   fechaLiquidacion: string;
+  esFinal: boolean;
 }) {
   const d = detalle ?? {};
   const saldoPeriodo = d.saldo_periodo ?? (ivaGenerado - ivaDescontable);
@@ -38,7 +40,9 @@ export default function ReporteIVA({
 
   const partes: string[] = [];
   partes.push(
-    `Durante el periodo del ${fechaLarga(periodoInicio)} al ${fechaLarga(periodoFin)}, ${clienteNombre} generó un IVA de ${fmt(ivaGenerado)} sobre sus ventas y un IVA descontable de ${fmt(ivaDescontable)} sobre sus compras, para un saldo del periodo ${saldoPeriodo >= 0 ? `a pagar de ${fmt(saldoPeriodo)}` : `a favor de ${fmt(saldoPeriodo)}`}.`
+    esFinal
+      ? `Durante el periodo del ${fechaLarga(periodoInicio)} al ${fechaLarga(periodoFin)}, ${clienteNombre} generó un IVA de ${fmt(ivaGenerado)} sobre sus ventas y un IVA descontable de ${fmt(ivaDescontable)} sobre sus compras, para un saldo del periodo ${saldoPeriodo >= 0 ? `a pagar de ${fmt(saldoPeriodo)}` : `a favor de ${fmt(saldoPeriodo)}`}.`
+      : `A corte del ${fechaLarga(periodoFin)} (informe parcial de control dentro del periodo del ${fechaLarga(periodoInicio)} al ${fechaLarga(detalle?.periodo_oficial_fin ?? periodoFin)}), ${clienteNombre} acumula un IVA de ${fmt(ivaGenerado)} sobre sus ventas y un IVA descontable de ${fmt(ivaDescontable)} sobre sus compras, para un saldo ${saldoPeriodo >= 0 ? `a pagar de ${fmt(saldoPeriodo)}` : `a favor de ${fmt(saldoPeriodo)}`} a la fecha.`
   );
   if (arrastre > 0) {
     partes.push(
@@ -51,20 +55,33 @@ export default function ReporteIVA({
     );
   }
   partes.push(
-    saldoFinal >= 0
-      ? `El valor final a pagar por este periodo es de ${fmt(saldoFinal)}.`
-      : `El resultado final es un saldo a favor de ${fmt(saldoFinal)}, disponible para cruzar en el siguiente periodo.`
+    esFinal
+      ? (saldoFinal >= 0
+          ? `El valor final a pagar por este periodo es de ${fmt(saldoFinal)}.`
+          : `El resultado final es un saldo a favor de ${fmt(saldoFinal)}, disponible para cruzar en el siguiente periodo.`)
+      : (saldoFinal >= 0
+          ? `El valor a pagar acumulado a la fecha de corte es de ${fmt(saldoFinal)}, sujeto a variar hasta el cierre del periodo.`
+          : `El saldo a favor acumulado a la fecha de corte es de ${fmt(saldoFinal)}, sujeto a variar hasta el cierre del periodo.`)
   );
 
   return (
     <div>
       <div className="mb-6">
-        <p className="text-xs uppercase tracking-wide font-medium mb-1" style={{ color: "#9A7223" }}>
-          Reporte de liquidación de IVA
-        </p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-xs uppercase tracking-wide font-medium" style={{ color: "#9A7223" }}>
+            Reporte de liquidación de IVA
+          </p>
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
+            backgroundColor: esFinal ? "#E7F0E4" : "#F5EEDF",
+            color:           esFinal ? "#3B6D2E" : "#9A7223",
+          }}>
+            {esFinal ? "Informe final" : "Informe parcial"}
+          </span>
+        </div>
         <h1 className="font-serif text-2xl font-bold" style={{ color: "#1A1814" }}>{clienteNombre}</h1>
         <p className="text-sm mt-1" style={{ color: "#9A9281" }}>
-          Periodo {fechaLarga(periodoInicio)} — {fechaLarga(periodoFin)} · Liquidado el {fechaLarga(fechaLiquidacion.slice(0, 10))}
+          {esFinal ? "Periodo" : "Corte"} {fechaLarga(periodoInicio)} — {fechaLarga(periodoFin)} · Liquidado el {fechaLarga(fechaLiquidacion.slice(0, 10))}
+          {!esFinal && detalle?.periodo_oficial_fin && ` · Periodo oficial hasta el ${fechaLarga(detalle.periodo_oficial_fin)}`}
         </p>
       </div>
 

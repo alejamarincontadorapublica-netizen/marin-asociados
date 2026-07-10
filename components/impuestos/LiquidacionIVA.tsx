@@ -23,6 +23,7 @@ type Liquidacion = {
   saldo: number;
   detalle: Record<string, unknown> | null;
   created_at: string;
+  es_final: boolean;
 };
 
 type CertificadoConPeriodo = CertificadoReteIVA & { periodo_inicio: string; periodo_fin: string };
@@ -49,11 +50,23 @@ export default function LiquidacionIVA({
   const [periodoIdx, setPeriodoIdx] = useState(0);
   const [arrastrar, setArrastrar] = useState(false);
   const [montoArrastreStr, setMontoArrastreStr] = useState("");
+  const [esFinal, setEsFinal] = useState(true);
+  const [fechaCorte, setFechaCorte] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState("");
 
   const periodos = useMemo(() => generarPeriodosFiscales(periodicidad, anio), [periodicidad, anio]);
   const periodo = periodos[periodoIdx] ?? periodos[0];
+
+  // Fecha real hasta donde se calcula: todo el periodo si es informe final,
+  // o una fecha de corte intermedia si es un informe parcial de control
+  const fechaFinEfectiva = esFinal ? periodo.fin : (fechaCorte || periodo.fin);
+
+  useEffect(() => {
+    setEsFinal(true);
+    setFechaCorte(periodo.fin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodo.inicio, periodo.fin]);
 
   const docsDelPeriodo = useMemo(
     () =>
@@ -62,9 +75,9 @@ export default function LiquidacionIVA({
           d.clasificacion !== "IGNORAR" &&
           d.fecha_emision &&
           d.fecha_emision >= periodo.inicio &&
-          d.fecha_emision <= periodo.fin
+          d.fecha_emision <= fechaFinEfectiva
       ),
-    [documentos, periodo]
+    [documentos, periodo, fechaFinEfectiva]
   );
 
   const { iva_generado, iva_descontable, saldo, detalle } = useMemo(() => {
@@ -82,10 +95,11 @@ export default function LiquidacionIVA({
     );
   }, [docsDelPeriodo, facturaAiu, porcentajeAiuDefecto]);
 
-  // Liquidación guardada más reciente cuyo periodo termina antes de que empiece el actual
+  // Liquidación FINAL guardada más reciente cuyo periodo termina antes de que empiece el actual
+  // (los informes parciales de control no cuentan como saldo definitivo a arrastrar)
   const liquidacionAnterior = useMemo(() => {
     return liquidaciones
-      .filter((l) => l.periodo_fin < periodo.inicio)
+      .filter((l) => l.es_final && l.periodo_fin < periodo.inicio)
       .sort((a, b) => (a.periodo_fin < b.periodo_fin ? 1 : -1))[0] ?? null;
   }, [liquidaciones, periodo]);
 
@@ -116,7 +130,7 @@ export default function LiquidacionIVA({
   const saldoFinal = saldoConArrastre - totalReteIva;
 
   const yaLiquidado = liquidaciones.find(
-    (l) => l.periodo_inicio === periodo.inicio && l.periodo_fin === periodo.fin
+    (l) => l.periodo_inicio === periodo.inicio && l.periodo_fin === fechaFinEfectiva
   );
 
   async function guardar() {
@@ -129,7 +143,8 @@ export default function LiquidacionIVA({
       body: JSON.stringify({
         cliente_id: clienteId,
         periodo_inicio: periodo.inicio,
-        periodo_fin: periodo.fin,
+        periodo_fin: fechaFinEfectiva,
+        es_final: esFinal,
         iva_generado,
         iva_descontable,
         saldo: saldoFinal,
@@ -143,6 +158,7 @@ export default function LiquidacionIVA({
             : null,
           reteiva_total: totalReteIva,
           reteiva_certificados: certificadosDelPeriodo.length,
+          periodo_oficial_fin: periodo.fin,
         },
       }),
     });
@@ -187,8 +203,45 @@ export default function LiquidacionIVA({
             {periodos.map((p, i) => <option key={p.inicio} value={i}>{p.etiqueta}</option>)}
           </select>
         </div>
+        <div>
+          <label className="block text-xs font-medium mb-1.5" style={{ color: "#9A9281" }}>Tipo de informe</label>
+          <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "#E8E1D4" }}>
+            {[
+              { v: true,  t: "Final (todo el periodo)" },
+              { v: false, t: "Parcial (corte a fecha)" },
+            ].map((opt) => (
+              <button
+                key={String(opt.v)}
+                type="button"
+                onClick={() => setEsFinal(opt.v)}
+                className="px-3 py-2 text-xs font-medium transition-colors"
+                style={{
+                  backgroundColor: esFinal === opt.v ? "#1A1814" : "#FFFFFF",
+                  color:           esFinal === opt.v ? "#C0A36B" : "#9A9281",
+                }}
+              >
+                {opt.t}
+              </button>
+            ))}
+          </div>
+        </div>
+        {!esFinal && (
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: "#9A9281" }}>Corte hasta</label>
+            <input
+              type="date"
+              value={fechaCorte}
+              min={periodo.inicio}
+              max={periodo.fin}
+              onChange={(e) => setFechaCorte(e.target.value)}
+              className="px-3 py-2 rounded-lg text-sm border"
+              style={{ borderColor: "#E8E1D4", color: "#1A1814" }}
+            />
+          </div>
+        )}
         <span className="text-xs" style={{ color: "#9A9281" }}>
-          {docsDelPeriodo.length} documentos en este periodo
+          {docsDelPeriodo.length} documentos {esFinal ? "en este periodo" : `hasta el corte`}
+          {" "}· Periodo oficial: {periodo.etiqueta}
         </span>
         {yaLiquidado && (
           <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: "#E7F0E4", color: "#3B6D2E" }}>
@@ -196,6 +249,12 @@ export default function LiquidacionIVA({
           </span>
         )}
       </div>
+
+      {!esFinal && (
+        <div className="rounded-xl border p-4 mb-4 text-xs" style={{ backgroundColor: "#F5EEDF", borderColor: "#E8D9B8", color: "#6B4F2A" }}>
+          Este es un <strong>informe parcial de control</strong>, del {periodo.inicio} al {fechaFinEfectiva}, dentro del periodo oficial {periodo.etiqueta}. No reemplaza el informe final que se debe liquidar al cerrar todo el periodo.
+        </div>
+      )}
 
       {/* Resumen del periodo */}
       <div className="grid grid-cols-3 gap-4 mb-4">
@@ -285,7 +344,11 @@ export default function LiquidacionIVA({
         className="px-6 py-2.5 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-60 mb-8"
         style={{ backgroundColor: "#C0A36B", color: "#1A1814" }}
       >
-        {guardando ? "Guardando..." : yaLiquidado ? "Actualizar liquidación" : "Guardar liquidación"}
+        {guardando
+          ? "Guardando..."
+          : yaLiquidado
+            ? (esFinal ? "Actualizar liquidación final" : "Actualizar informe parcial")
+            : (esFinal ? "Guardar liquidación final" : "Guardar informe parcial")}
       </button>
 
       {/* Historial */}
@@ -296,7 +359,7 @@ export default function LiquidacionIVA({
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid #E8E1D4", backgroundColor: "#FDFBF7" }}>
-                  {["Periodo", "IVA generado", "IVA descontable", "Saldo final", "Guardado", ""].map((h) => (
+                  {["Periodo", "Tipo", "IVA generado", "IVA descontable", "Saldo final", "Guardado", ""].map((h) => (
                     <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: "#9A9281" }}>{h}</th>
                   ))}
                 </tr>
@@ -305,6 +368,14 @@ export default function LiquidacionIVA({
                 {liquidaciones.map((l, i) => (
                   <tr key={l.id} style={{ borderBottom: i < liquidaciones.length - 1 ? "1px solid #EFEADF" : "none" }}>
                     <td className="px-4 py-2.5 text-xs" style={{ color: "#2A2620" }}>{l.periodo_inicio} a {l.periodo_fin}</td>
+                    <td className="px-4 py-2.5 text-xs">
+                      <span className="px-2 py-0.5 rounded-full font-medium" style={{
+                        backgroundColor: l.es_final ? "#E7F0E4" : "#F5EEDF",
+                        color:           l.es_final ? "#3B6D2E" : "#9A7223",
+                      }}>
+                        {l.es_final ? "Final" : "Parcial"}
+                      </span>
+                    </td>
                     <td className="px-4 py-2.5 text-xs text-right" style={{ color: "#2A2620" }}>{fmt(l.iva_generado)}</td>
                     <td className="px-4 py-2.5 text-xs text-right" style={{ color: "#2A2620" }}>{fmt(l.iva_descontable)}</td>
                     <td className="px-4 py-2.5 text-xs text-right font-medium" style={{ color: l.saldo >= 0 ? "#9E4332" : "#3B6D2E" }}>

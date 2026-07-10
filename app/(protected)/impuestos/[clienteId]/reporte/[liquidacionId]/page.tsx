@@ -37,6 +37,7 @@ export default async function ReporteIVAPage({ params }: { params: Params }) {
         saldoFinal={liquidacion.saldo}
         detalle={liquidacion.detalle}
         fechaLiquidacion={liquidacion.created_at}
+        esFinal={liquidacion.es_final}
       />
     </div>
   );
