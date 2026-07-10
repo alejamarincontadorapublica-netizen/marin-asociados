@@ -12,7 +12,7 @@ export default async function ReporteIVAPage({ params }: { params: Params }) {
 
   const { data: cliente, error: errorCliente } = await supabase
     .from("clientes")
-    .select("nombre")
+    .select("nombre, tipo, cedula, cedula_rl")
     .eq("id", clienteId)
     .single();
 
@@ -42,6 +42,9 @@ export default async function ReporteIVAPage({ params }: { params: Params }) {
         detalle={liquidacion.detalle}
         fechaLiquidacion={liquidacion.created_at}
         esFinal={liquidacion.es_final}
+        clienteTipo={cliente.tipo}
+        clienteCedulaRl={cliente.cedula_rl}
+        clienteCedula={cliente.cedula}
       />
     </div>
   );
