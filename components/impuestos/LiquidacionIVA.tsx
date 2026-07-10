@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { calcularIVA, generarPeriodosFiscales, type Periodicidad } from "@/lib/reglas-tributarias";
 import CertificadosReteIVA, { type CertificadoReteIVA } from "./CertificadosReteIVA";
 
@@ -295,7 +296,7 @@ export default function LiquidacionIVA({
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid #E8E1D4", backgroundColor: "#FDFBF7" }}>
-                  {["Periodo", "IVA generado", "IVA descontable", "Saldo final", "Guardado"].map((h) => (
+                  {["Periodo", "IVA generado", "IVA descontable", "Saldo final", "Guardado", ""].map((h) => (
                     <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: "#9A9281" }}>{h}</th>
                   ))}
                 </tr>
@@ -311,6 +312,11 @@ export default function LiquidacionIVA({
                     </td>
                     <td className="px-4 py-2.5 text-xs" style={{ color: "#9A9281" }}>
                       {new Date(l.created_at).toLocaleDateString("es-CO")}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs">
+                      <Link href={`/impuestos/${clienteId}/reporte/${l.id}`} style={{ color: "#9A7223" }}>
+                        Ver reporte
+                      </Link>
                     </td>
                   </tr>
                 ))}
