@@ -33,3 +33,9 @@ body {
   font-family: Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+@media print {
+  header, aside, .no-print { display: none !important; }
+  main { padding: 0 !important; margin: 0 !important; }
+  body { background-color: #FFFFFF !important; }
+}

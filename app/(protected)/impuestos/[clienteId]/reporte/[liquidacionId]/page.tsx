@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import ReporteIVA from "@/components/impuestos/ReporteIVA";
+import BotonDescargarReporte from "@/components/impuestos/BotonDescargarReporte";
 
 type Params = Promise<{ clienteId: string; liquidacionId: string }>;
 
@@ -25,9 +26,12 @@ export default async function ReporteIVAPage({ params }: { params: Params }) {
 
   return (
     <div>
-      <Link href={`/impuestos/${clienteId}`} className="text-xs mb-4 inline-block" style={{ color: "#9A7223" }}>
-        ← Volver a la liquidación
-      </Link>
+      <div className="flex items-center justify-between mb-4 no-print">
+        <Link href={`/impuestos/${clienteId}`} className="text-xs inline-block" style={{ color: "#9A7223" }}>
+          ← Volver a la liquidación
+        </Link>
+        <BotonDescargarReporte />
+      </div>
       <ReporteIVA
         clienteNombre={cliente.nombre}
         periodoInicio={liquidacion.periodo_inicio}
