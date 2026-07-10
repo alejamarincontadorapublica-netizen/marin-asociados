@@ -124,33 +124,38 @@ export default function ReporteIVA({
         />
       </div>
 
-      {/* Resumen profesional */}
-      <div className="rounded-xl border p-5 mb-10 print:break-before-page" style={{ backgroundColor: "#FDFBF7", borderColor: "#E8E1D4" }}>
-        <h3 className="font-serif font-semibold mb-2" style={{ color: "#1A1814" }}>Resumen del resultado</h3>
-        <div className="space-y-2 text-sm" style={{ color: "#2A2620" }}>
-          {partes.map((p, i) => <p key={i}>{p}</p>)}
+      {/* Resumen profesional + firmas: juntos, en una hoja nueva al imprimir */}
+      <div style={{ pageBreakBefore: "always", breakBefore: "page" }}>
+        <div className="rounded-xl border p-5 mb-10" style={{ backgroundColor: "#FDFBF7", borderColor: "#E8E1D4" }}>
+          <h3 className="font-serif font-semibold mb-2" style={{ color: "#1A1814" }}>Resumen del resultado</h3>
+          <div className="space-y-2 text-sm" style={{ color: "#2A2620" }}>
+            {partes.map((p, i) => <p key={i}>{p}</p>)}
+          </div>
         </div>
-      </div>
 
-      {/* Firmas */}
-      <div className="grid grid-cols-2 gap-10 pt-6 print:break-inside-avoid" style={{ borderTop: "1px solid #E8E1D4" }}>
-        <div>
-          <div style={{ borderTop: "1px solid #1A1814", marginTop: "56px" }} />
-          <p className="text-sm font-medium mt-2" style={{ color: "#1A1814" }}>
-            {clienteTipo === "natural" ? clienteNombre : "Representante Legal"}
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: "#9A9281" }}>
-            C.C. {(clienteTipo === "natural" ? clienteCedula : clienteCedulaRl) || "_______________"}
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: "#9A9281" }}>
-            {clienteTipo === "natural" ? "Firma" : `Representante Legal · ${clienteNombre}`}
-          </p>
-        </div>
-        <div>
-          <div style={{ borderTop: "1px solid #1A1814", marginTop: "56px" }} />
-          <p className="text-sm font-medium mt-2" style={{ color: "#1A1814" }}>Alejandra Marín</p>
-          <p className="text-xs mt-0.5" style={{ color: "#9A9281" }}>T.P. 327147</p>
-          <p className="text-xs mt-0.5" style={{ color: "#9A9281" }}>Contadora Pública</p>
+        {/* Firmas */}
+        <div
+          className="grid grid-cols-2 gap-10 pt-6"
+          style={{ borderTop: "1px solid #E8E1D4", pageBreakInside: "avoid", breakInside: "avoid" }}
+        >
+          <div>
+            <div style={{ borderTop: "1px solid #1A1814", marginTop: "56px" }} />
+            <p className="text-sm font-medium mt-2" style={{ color: "#1A1814" }}>
+              {clienteTipo === "natural" ? clienteNombre : "Representante Legal"}
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: "#9A9281" }}>
+              C.C. {(clienteTipo === "natural" ? clienteCedula : clienteCedulaRl) || "_______________"}
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: "#9A9281" }}>
+              {clienteTipo === "natural" ? "Firma" : `Representante Legal · ${clienteNombre}`}
+            </p>
+          </div>
+          <div>
+            <div style={{ borderTop: "1px solid #1A1814", marginTop: "56px" }} />
+            <p className="text-sm font-medium mt-2" style={{ color: "#1A1814" }}>Alejandra Marín</p>
+            <p className="text-xs mt-0.5" style={{ color: "#9A9281" }}>T.P. 327147</p>
+            <p className="text-xs mt-0.5" style={{ color: "#9A9281" }}>Contadora Pública</p>
+          </div>
         </div>
       </div>
     </div>
