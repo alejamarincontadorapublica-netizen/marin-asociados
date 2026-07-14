@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { generarPeriodosMensuales, esDocumentoSoporte, CONCEPTOS_RETEFUENTE } from "@/lib/reglas-tributarias";
+import { generarPeriodosMensuales, esDocumentoSoporte, type ConceptoReteFuente } from "@/lib/reglas-tributarias";
 
 type Documento = {
   id: string;
@@ -33,21 +33,19 @@ const fmt = (n: number) =>
 const anioActual = new Date().getFullYear();
 const ANIOS = [anioActual - 1, anioActual, anioActual + 1];
 
-function conceptoNombre(id: string) {
-  return CONCEPTOS_RETEFUENTE.find((c) => c.id === id)?.nombre ?? id;
-}
-
 function FilaPendiente({
-  doc, clienteId, periodoInicio, periodoFin, onGuardado,
+  doc, clienteId, periodoInicio, periodoFin, conceptos, uvtValor, onGuardado,
 }: {
   doc: Documento;
   clienteId: string;
   periodoInicio: string;
   periodoFin: string;
+  conceptos: ConceptoReteFuente[];
+  uvtValor: number;
   onGuardado: () => void;
 }) {
-  const [conceptoId, setConceptoId] = useState(CONCEPTOS_RETEFUENTE[0].id);
-  const [tarifaStr, setTarifaStr] = useState(String(CONCEPTOS_RETEFUENTE[0].tarifa));
+  const [conceptoId, setConceptoId] = useState(conceptos[0]?.id ?? "");
+  const [tarifaStr, setTarifaStr] = useState(String(conceptos[0]?.tarifa ?? 0));
   const [baseStr, setBaseStr] = useState(String(doc.base ?? 0));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
@@ -56,9 +54,13 @@ function FilaPendiente({
   const base = parseFloat(baseStr) || 0;
   const valor = Math.round(base * (tarifa / 100));
 
+  const conceptoActivo = conceptos.find((c) => c.id === conceptoId);
+  const baseMinimaPesos = (conceptoActivo?.base_uvt ?? 0) * uvtValor;
+  const bajoElTope = baseMinimaPesos > 0 && base < baseMinimaPesos;
+
   function cambiarConcepto(id: string) {
     setConceptoId(id);
-    const c = CONCEPTOS_RETEFUENTE.find((x) => x.id === id);
+    const c = conceptos.find((x) => x.id === id);
     if (c) setTarifaStr(String(c.tarifa));
   }
 
@@ -73,7 +75,7 @@ function FilaPendiente({
         documento_id: doc.id,
         periodo_inicio: periodoInicio,
         periodo_fin: periodoFin,
-        concepto: conceptoNombre(conceptoId),
+        concepto: conceptoActivo?.concepto ?? "",
         tarifa,
         base,
         valor_retenido: valor,
@@ -102,12 +104,17 @@ function FilaPendiente({
       <td className="px-3 py-2">
         <select value={conceptoId} onChange={(e) => cambiarConcepto(e.target.value)}
           className="text-xs px-2 py-1.5 rounded-lg border w-full" style={{ borderColor: "#E8E1D4" }}>
-          {CONCEPTOS_RETEFUENTE.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          {conceptos.map((c) => <option key={c.id} value={c.id}>{c.concepto}</option>)}
         </select>
       </td>
       <td className="px-3 py-2">
         <input type="number" value={baseStr} onChange={(e) => setBaseStr(e.target.value)}
-          className="text-xs px-2 py-1.5 rounded-lg border w-24" style={{ borderColor: "#E8E1D4" }} />
+          className="text-xs px-2 py-1.5 rounded-lg border w-24" style={{ borderColor: bajoElTope ? "#E8C9C0" : "#E8E1D4" }} />
+        {bajoElTope && (
+          <p className="text-xs mt-1" style={{ color: "#9E4332" }}>
+            ⚠ Bajo el tope ({conceptoActivo?.base_uvt} UVT = {fmt(baseMinimaPesos)})
+          </p>
+        )}
       </td>
       <td className="px-3 py-2">
         <input type="number" value={tarifaStr} onChange={(e) => setTarifaStr(e.target.value)}
@@ -128,12 +135,14 @@ function FilaPendiente({
 }
 
 export default function RetencionFuente({
-  clienteId, documentos, nitsAutorretenedores, retenciones,
+  clienteId, documentos, nitsAutorretenedores, retenciones, conceptos, uvtValor,
 }: {
   clienteId: string;
   documentos: Documento[];
   nitsAutorretenedores: string[];
   retenciones: Retencion[];
+  conceptos: ConceptoReteFuente[];
+  uvtValor: number;
 }) {
   const router = useRouter();
   const [anio, setAnio] = useState(anioActual);
@@ -219,6 +228,8 @@ export default function RetencionFuente({
                     clienteId={clienteId}
                     periodoInicio={periodo.inicio}
                     periodoFin={periodo.fin}
+                    conceptos={conceptos}
+                    uvtValor={uvtValor}
                     onGuardado={() => router.refresh()}
                   />
                 ))}

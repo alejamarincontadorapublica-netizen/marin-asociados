@@ -33,6 +33,18 @@ export default async function RetefuentePage({ params }: { params: Params }) {
     .eq("cliente_id", clienteId)
     .order("periodo_inicio", { ascending: false });
 
+  const { data: conceptos } = await supabase
+    .from("conceptos_retefuente")
+    .select("*")
+    .eq("activo", true)
+    .order("concepto", { ascending: true });
+
+  const { data: uvtConfig } = await supabase
+    .from("configuracion_valores")
+    .select("valor")
+    .eq("clave", "uvt_vigente")
+    .single();
+
   return (
     <div>
       <div className="mb-6">
@@ -80,12 +92,30 @@ export default async function RetefuentePage({ params }: { params: Params }) {
             Cambiar en ficha del cliente
           </Link>
         </div>
+      ) : !conceptos || conceptos.length === 0 ? (
+        <div className="rounded-xl border p-6 text-center" style={{ backgroundColor: "#F6E9E6", borderColor: "#E8C9C0" }}>
+          <p className="font-serif text-lg mb-2" style={{ color: "#9E4332" }}>
+            Falta configurar los conceptos de Retención en la Fuente
+          </p>
+          <p className="text-sm mb-4" style={{ color: "#9E4332" }}>
+            Agrega al menos un concepto y su tarifa en el módulo de Configuración antes de poder aplicar retenciones.
+          </p>
+          <Link
+            href="/configuracion"
+            className="text-xs px-4 py-2 rounded-lg font-semibold inline-block"
+            style={{ backgroundColor: "#1A1814", color: "#C0A36B" }}
+          >
+            Ir a Configuración
+          </Link>
+        </div>
       ) : (
         <RetencionFuente
           clienteId={clienteId}
           documentos={documentos ?? []}
           nitsAutorretenedores={(terceros ?? []).map((t) => t.nit)}
           retenciones={retenciones ?? []}
+          conceptos={conceptos}
+          uvtValor={uvtConfig?.valor?.valor ?? 0}
         />
       )}
     </div>

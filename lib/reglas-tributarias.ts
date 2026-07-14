@@ -143,27 +143,14 @@ export function generarPeriodosMensuales(anio: number): PeriodoFiscal[] {
   });
 }
 
-// Tarifas vigentes desde el 1 de julio de 2026 (Decreto 572 de 2025, UVT 2026 = $52.374).
-// Verificar vigencia antes de usar en periodos futuros — estas tarifas han cambiado
-// varias veces por vía judicial/administrativa en los últimos meses.
-export type ConceptoReteFuente = { id: string; nombre: string; tarifa: number };
-
-export const CONCEPTOS_RETEFUENTE: ConceptoReteFuente[] = [
-  { id: "compras_declarante",     nombre: "Compras generales (declarante)",           tarifa: 2.5 },
-  { id: "compras_no_declarante",  nombre: "Compras generales (no declarante)",        tarifa: 3.5 },
-  { id: "compras_agricolas",      nombre: "Productos agrícolas sin procesar",         tarifa: 1.5 },
-  { id: "servicios_declarante",   nombre: "Servicios generales (declarante)",         tarifa: 4 },
-  { id: "servicios_no_declarante",nombre: "Servicios generales (no declarante)",      tarifa: 6 },
-  { id: "transporte_carga",       nombre: "Transporte de carga",                      tarifa: 1 },
-  { id: "transporte_pasajeros",   nombre: "Transporte de pasajeros terrestre",        tarifa: 3.5 },
-  { id: "servicios_temporales",   nombre: "Servicios temporales (sobre AIU)",         tarifa: 1 },
-  { id: "vigilancia_aseo",        nombre: "Vigilancia y aseo (sobre AIU)",            tarifa: 2 },
-  { id: "hoteles_restaurantes",   nombre: "Hoteles y restaurantes",                   tarifa: 3.5 },
-  { id: "arrendamiento_muebles",  nombre: "Arrendamiento de bienes muebles",          tarifa: 4 },
-  { id: "arrendamiento_inmuebles",nombre: "Arrendamiento de bienes inmuebles",        tarifa: 3.5 },
-  { id: "honorarios_juridica",    nombre: "Honorarios / comisiones (persona jurídica)", tarifa: 11 },
-  { id: "honorarios_no_declarante", nombre: "Honorarios / comisiones (no declarante)", tarifa: 10 },
-  { id: "rendimientos_financieros", nombre: "Rendimientos financieros",               tarifa: 7 },
-  { id: "construccion",           nombre: "Contratos de construcción",                tarifa: 2 },
-  { id: "otros",                  nombre: "Otros ingresos tributarios",               tarifa: 2.5 },
-];
+// Los conceptos, bases mínimas (UVT) y tarifas viven en la tabla
+// `conceptos_retefuente` de Supabase — editable desde Configuración,
+// no fijos en código (la norma ha sido muy volátil). Ver tipo abajo.
+export type ConceptoReteFuente = {
+  id: string;
+  concepto: string;
+  base_uvt: number;
+  tarifa: number;
+  activo: boolean;
+  updated_at: string;
+};
