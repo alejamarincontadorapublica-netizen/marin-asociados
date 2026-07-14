@@ -31,6 +31,13 @@ export function clasificarDocumento(tipoDoc: string): ClasificacionDoc {
   return "FACTURA";
 }
 
+// Un "documento soporte" es una compra a un tercero no obligado a facturar.
+// Para IVA se ignora (clasificacion IGNORAR), pero para Retención en la Fuente
+// SÍ cuenta como una compra sobre la que se debe practicar retención.
+export function esDocumentoSoporte(tipoDoc: string): boolean {
+  return tipoDoc.toLowerCase().trim().includes("documento soporte");
+}
+
 export function calcularIVA(documentos: Array<{
   clasificacion: ClasificacionDoc;
   grupo: GrupoDoc;
@@ -116,3 +123,47 @@ export function generarPeriodosFiscales(periodicidad: Periodicidad, anio: number
     etiqueta: `${r.etiqueta} ${anio}`,
   }));
 }
+
+// ── Retención en la Fuente (Capa 3) ────────────────────────────────
+// Se declara mensualmente (Formulario 350), para todos los clientes.
+
+const MESES_NOMBRE = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+export function generarPeriodosMensuales(anio: number): PeriodoFiscal[] {
+  return MESES_NOMBRE.map((nombre, i) => {
+    const mes = i + 1;
+    return {
+      inicio: `${anio}-${pad(mes)}-01`,
+      fin: `${anio}-${pad(mes)}-${pad(ultimoDiaMes(anio, mes))}`,
+      etiqueta: `${nombre} ${anio}`,
+    };
+  });
+}
+
+// Tarifas vigentes desde el 1 de julio de 2026 (Decreto 572 de 2025, UVT 2026 = $52.374).
+// Verificar vigencia antes de usar en periodos futuros — estas tarifas han cambiado
+// varias veces por vía judicial/administrativa en los últimos meses.
+export type ConceptoReteFuente = { id: string; nombre: string; tarifa: number };
+
+export const CONCEPTOS_RETEFUENTE: ConceptoReteFuente[] = [
+  { id: "compras_declarante",     nombre: "Compras generales (declarante)",           tarifa: 2.5 },
+  { id: "compras_no_declarante",  nombre: "Compras generales (no declarante)",        tarifa: 3.5 },
+  { id: "compras_agricolas",      nombre: "Productos agrícolas sin procesar",         tarifa: 1.5 },
+  { id: "servicios_declarante",   nombre: "Servicios generales (declarante)",         tarifa: 4 },
+  { id: "servicios_no_declarante",nombre: "Servicios generales (no declarante)",      tarifa: 6 },
+  { id: "transporte_carga",       nombre: "Transporte de carga",                      tarifa: 1 },
+  { id: "transporte_pasajeros",   nombre: "Transporte de pasajeros terrestre",        tarifa: 3.5 },
+  { id: "servicios_temporales",   nombre: "Servicios temporales (sobre AIU)",         tarifa: 1 },
+  { id: "vigilancia_aseo",        nombre: "Vigilancia y aseo (sobre AIU)",            tarifa: 2 },
+  { id: "hoteles_restaurantes",   nombre: "Hoteles y restaurantes",                   tarifa: 3.5 },
+  { id: "arrendamiento_muebles",  nombre: "Arrendamiento de bienes muebles",          tarifa: 4 },
+  { id: "arrendamiento_inmuebles",nombre: "Arrendamiento de bienes inmuebles",        tarifa: 3.5 },
+  { id: "honorarios_juridica",    nombre: "Honorarios / comisiones (persona jurídica)", tarifa: 11 },
+  { id: "honorarios_no_declarante", nombre: "Honorarios / comisiones (no declarante)", tarifa: 10 },
+  { id: "rendimientos_financieros", nombre: "Rendimientos financieros",               tarifa: 7 },
+  { id: "construccion",           nombre: "Contratos de construcción",                tarifa: 2 },
+  { id: "otros",                  nombre: "Otros ingresos tributarios",               tarifa: 2.5 },
+];

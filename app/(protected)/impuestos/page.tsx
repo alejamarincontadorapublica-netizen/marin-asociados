@@ -16,13 +16,22 @@ export default async function ImpuestosPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-serif text-2xl font-bold" style={{ color: "#1A1814" }}>
-          Impuestos
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "#9A9281" }}>
-          Liquidación de IVA por periodo fiscal, con arrastre de saldo entre periodos
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="font-serif text-2xl font-bold" style={{ color: "#1A1814" }}>
+            Impuestos
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "#9A9281" }}>
+            IVA por periodo fiscal y Retención en la Fuente mensual
+          </p>
+        </div>
+        <Link
+          href="/impuestos/autorretenedores"
+          className="text-xs px-3 py-1.5 rounded-lg border shrink-0"
+          style={{ borderColor: "#E8E1D4", color: "#9A9281" }}
+        >
+          Terceros autorretenedores
+        </Link>
       </div>
 
       <div
@@ -45,7 +54,7 @@ export default async function ImpuestosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid #E8E1D4", backgroundColor: "#FDFBF7" }}>
-                {["Cliente", "Identificación", "Periodicidad IVA", ""].map((h) => (
+                {["Cliente", "Identificación", "Periodicidad IVA", "Retención", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold tracking-wide" style={{ color: "#9A9281" }}>
                     {h}
                   </th>
@@ -71,13 +80,31 @@ export default async function ImpuestosPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/impuestos/${c.id}`}
-                      className="text-xs px-3 py-1.5 rounded-lg font-medium"
-                      style={{ backgroundColor: "#C0A36B", color: "#1A1814" }}
-                    >
-                      Liquidar IVA
-                    </Link>
+                    {c.es_agente_retencion ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#E7F0E4", color: "#3B6D2E" }}>
+                        Agente de retención
+                      </span>
+                    ) : (
+                      <span className="text-xs" style={{ color: "#9A9281" }}>No aplica</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/impuestos/${c.id}`}
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                        style={{ backgroundColor: "#C0A36B", color: "#1A1814" }}
+                      >
+                        IVA
+                      </Link>
+                      <Link
+                        href={`/impuestos/${c.id}/retefuente`}
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium border"
+                        style={{ borderColor: "#E8E1D4", color: "#9A9281" }}
+                      >
+                        ReteFuente
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

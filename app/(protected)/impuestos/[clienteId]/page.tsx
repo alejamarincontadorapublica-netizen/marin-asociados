@@ -62,6 +62,23 @@ export default async function ImpuestosClientePage({ params }: { params: Params 
         </p>
       </div>
 
+      {/* Pestañas de impuestos */}
+      <div className="flex gap-1 mb-6 border-b" style={{ borderColor: "#E8E1D4" }}>
+        <span
+          className="px-4 py-2 text-sm font-medium"
+          style={{ color: "#1A1814", borderBottom: "2px solid #C0A36B" }}
+        >
+          IVA
+        </span>
+        <Link
+          href={`/impuestos/${clienteId}/retefuente`}
+          className="px-4 py-2 text-sm font-medium"
+          style={{ color: "#9A9281" }}
+        >
+          Retención en la Fuente
+        </Link>
+      </div>
+
       {!cliente.periodicidad_iva ? (
         <div
           className="rounded-xl border p-6 text-center"

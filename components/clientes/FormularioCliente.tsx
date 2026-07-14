@@ -19,12 +19,14 @@ type Cliente = {
   factura_aiu: boolean;
   porcentaje_aiu: string;
   periodicidad_iva: "" | "bimestral" | "cuatrimestral";
+  es_agente_retencion: boolean;
 };
 
 const vacío: Cliente = {
   nombre: "", tipo: "empresa", nit: "", cedula: "", cedula_rl: "",
   regimen: "ordinario", ciiu: "", municipio: "", municipios_ica: [],
   plan: "base", factura_aiu: false, porcentaje_aiu: "", periodicidad_iva: "",
+  es_agente_retencion: false,
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => (
@@ -110,6 +112,7 @@ export default function FormularioCliente({
                         ? parseFloat(form.porcentaje_aiu)
                         : null,
       periodicidad_iva: form.periodicidad_iva || null,
+      es_agente_retencion: form.es_agente_retencion,
     };
 
     const url    = modo === "crear" ? "/api/clientes" : `/api/clientes/${inicial?.id}`;
@@ -229,6 +232,30 @@ export default function FormularioCliente({
           </Select>
           <p className="text-xs mt-1" style={{ color: "#9A9281" }}>
             Necesaria para liquidar IVA por periodo en el módulo de Impuestos
+          </p>
+        </div>
+
+        <div>
+          <Label>¿Es agente de retención?</Label>
+          <div className="flex gap-3 mt-1">
+            {([true, false] as const).map((v) => (
+              <button
+                key={String(v)}
+                type="button"
+                onClick={() => set("es_agente_retencion")(v)}
+                className="flex-1 py-2 rounded-lg text-sm font-medium border transition-all"
+                style={{
+                  backgroundColor: form.es_agente_retencion === v ? "#1A1814" : "#FFFFFF",
+                  color:           form.es_agente_retencion === v ? "#C0A36B" : "#9A9281",
+                  borderColor:     form.es_agente_retencion === v ? "#1A1814" : "#E8E1D4",
+                }}
+              >
+                {v ? "Sí, retiene" : "No, aún no supera los topes"}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs mt-1" style={{ color: "#9A9281" }}>
+            Necesario para practicar Retención en la Fuente sobre sus compras en el módulo de Impuestos
           </p>
         </div>
 

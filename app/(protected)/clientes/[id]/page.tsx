@@ -84,6 +84,17 @@ export default async function DetalleClientePage({ params }: { params: Params })
                   </span>
                 </>
               )}
+              {cliente.es_agente_retencion && (
+                <>
+                  <span style={{ color: "#E8E1D4" }}>·</span>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: "#E7F0E4", color: "#3B6D2E" }}
+                  >
+                    Agente de retención
+                  </span>
+                </>
+              )}
             </div>
           </div>
           <BotonEliminarCliente id={cliente.id} nombre={cliente.nombre} />
@@ -176,6 +187,7 @@ export default async function DetalleClientePage({ params }: { params: Params })
           factura_aiu:    cliente.factura_aiu ?? false,
           porcentaje_aiu: cliente.porcentaje_aiu?.toString() ?? "",
           periodicidad_iva: cliente.periodicidad_iva ?? "",
+          es_agente_retencion: cliente.es_agente_retencion ?? false,
         }}
       />
     </div>

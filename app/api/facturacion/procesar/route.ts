@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       const cFecha  = col(/fecha/i);
       const cNit    = col(/nit/i);
       const cNombre = col(/nombre|raz[oó]n/i);
+      const cNumero = col(/n[uú]mero.*(factura|documento)/i) ?? col(/^folio$/i) ?? col(/consecutivo/i);
 
       for (const fila of filas) {
         const tipoDoc = cTipo ? String(fila[cTipo] ?? "").trim() : "";
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
         const nit    = cNit    ? (String(fila[cNit]   ?? "").trim() || null) : null;
         const nombre = cNombre ? (String(fila[cNombre]?? "").trim() || null) : null;
         const fecha  = parsearFecha(cFecha ? fila[cFecha] : null);
+        const numero = cNumero ? (String(fila[cNumero]?? "").trim() || null) : null;
 
         documentos.push({
           cliente_id:     clienteId,
@@ -70,6 +72,7 @@ export async function POST(request: NextRequest) {
           clasificacion,
           deducible:      clasificacion === "IGNORAR" ? "no_deducible" : "deducible",
           aiu_porcentaje: aiuPorcentaje,
+          numero_documento: numero,
         });
       }
     }
