@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generarPeriodosMensuales, esDocumentoSoporte, type ConceptoReteFuente } from "@/lib/reglas-tributarias";
+import ImportarPapelTrabajo from "./ImportarPapelTrabajo";
 
 type Documento = {
   id: string;
@@ -206,6 +207,8 @@ export default function RetencionFuente({
           {excluidosAutorretenedor > 0 && ` · ${excluidosAutorretenedor} excluidos por ser autorretenedores`}
         </span>
       </div>
+
+      <ImportarPapelTrabajo clienteId={clienteId} periodoInicio={periodo.inicio} periodoFin={periodo.fin} />
 
       {/* Pendientes por asignar */}
       {pendientes.length > 0 && (

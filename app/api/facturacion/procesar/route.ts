@@ -32,11 +32,14 @@ export async function POST(request: NextRequest) {
 
       // Detectar columnas por nombre (la DIAN varía mayúsculas y acentos)
       const claves = Object.keys(filas[0]);
-      const col    = (pat: RegExp) => claves.find((k) => pat.test(k)) ?? null;
+      const col    = (pat: RegExp) => claves.find((k) => pat.test(k.trim())) ?? null;
 
       const cTipo   = col(/tipo\s*de\s*documento/i);
       const cIva    = col(/^iva$/i);
-      const cBase   = col(/^base$/i);
+      // La DIAN a veces trae "BASE" y a veces "BASE IVA" — antes solo se
+      // capturaba el nombre exacto "BASE" y por eso quedaba en $0 seguido.
+      const cBase   = col(/base/i);
+      const cSuma   = col(/^suma$/i);
       const cTotal  = col(/^total$/i);
       const cCufe   = col(/cufe|cude/i);
       const cFecha  = col(/fecha/i);
@@ -51,6 +54,7 @@ export async function POST(request: NextRequest) {
         const clasificacion = clasificarDocumento(tipoDoc);
         const iva    = parsearValor(cIva   ? fila[cIva]   : 0);
         const base   = parsearValor(cBase  ? fila[cBase]  : 0);
+        const suma   = cSuma ? parsearValor(fila[cSuma]) : null;
         const total  = parsearValor(cTotal ? fila[cTotal] : 0);
         const cufe   = cCufe   ? (String(fila[cCufe]  ?? "").trim() || null) : null;
         const nit    = cNit    ? (String(fila[cNit]   ?? "").trim() || null) : null;
@@ -67,6 +71,7 @@ export async function POST(request: NextRequest) {
           nit_emisor:     nit,
           nombre_emisor:  nombre,
           base,
+          suma,
           iva,
           total,
           clasificacion,
