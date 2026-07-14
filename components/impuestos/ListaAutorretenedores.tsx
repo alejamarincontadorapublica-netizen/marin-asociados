@@ -3,7 +3,84 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Tercero = { nit: string; nombre: string | null; created_at: string };
+type Tercero = { id: string; nit: string; nombre: string | null; created_at: string };
+
+function FilaTercero({ t, onCambio }: { t: Tercero; onCambio: () => void }) {
+  const [editando, setEditando] = useState(false);
+  const [nit, setNit] = useState(t.nit);
+  const [nombre, setNombre] = useState(t.nombre ?? "");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function guardar() {
+    setError("");
+    if (!nit.trim()) { setError("El NIT es obligatorio."); return; }
+    setGuardando(true);
+    const res = await fetch(`/api/impuestos/autorretenedores/${t.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nit: nit.trim(), nombre: nombre.trim() }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setError(data.error ?? "Error al guardar.");
+      setGuardando(false);
+      return;
+    }
+    setGuardando(false);
+    setEditando(false);
+    onCambio();
+  }
+
+  async function eliminar() {
+    if (!confirm(`¿Quitar ${t.nit} de la lista de autorretenedores?`)) return;
+    await fetch(`/api/impuestos/autorretenedores/${t.id}`, { method: "DELETE" });
+    onCambio();
+  }
+
+  if (editando) {
+    return (
+      <tr style={{ borderBottom: "1px solid #EFEADF", backgroundColor: "#FDFBF7" }}>
+        <td className="px-4 py-2.5">
+          <input value={nit} onChange={(e) => setNit(e.target.value)}
+            className="text-xs px-2 py-1.5 rounded-lg border w-full" style={{ borderColor: "#E8E1D4" }} />
+        </td>
+        <td className="px-4 py-2.5">
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)}
+            className="text-xs px-2 py-1.5 rounded-lg border w-full" style={{ borderColor: "#E8E1D4" }} />
+        </td>
+        <td className="px-4 py-2.5 text-xs" style={{ color: "#9A9281" }}>
+          {new Date(t.created_at).toLocaleDateString("es-CO")}
+        </td>
+        <td className="px-4 py-2.5 text-xs whitespace-nowrap">
+          <button onClick={guardar} disabled={guardando}
+            className="px-2.5 py-1 rounded-lg font-medium mr-2 disabled:opacity-60"
+            style={{ backgroundColor: "#C0A36B", color: "#1A1814" }}>
+            {guardando ? "..." : "Guardar"}
+          </button>
+          <button onClick={() => { setEditando(false); setNit(t.nit); setNombre(t.nombre ?? ""); }} style={{ color: "#9A9281" }}>
+            Cancelar
+          </button>
+          {error && <p className="mt-1" style={{ color: "#9E4332" }}>{error}</p>}
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr style={{ borderBottom: "1px solid #EFEADF" }}>
+      <td className="px-4 py-2.5 text-xs" style={{ color: "#2A2620" }}>{t.nit}</td>
+      <td className="px-4 py-2.5 text-xs" style={{ color: "#2A2620" }}>{t.nombre ?? "—"}</td>
+      <td className="px-4 py-2.5 text-xs" style={{ color: "#9A9281" }}>
+        {new Date(t.created_at).toLocaleDateString("es-CO")}
+      </td>
+      <td className="px-4 py-2.5 text-xs whitespace-nowrap">
+        <button onClick={() => setEditando(true)} className="mr-3" style={{ color: "#9A7223" }}>Editar</button>
+        <button onClick={eliminar} style={{ color: "#9E4332" }}>Quitar</button>
+      </td>
+    </tr>
+  );
+}
 
 export default function ListaAutorretenedores({ terceros }: { terceros: Tercero[] }) {
   const router = useRouter();
@@ -33,12 +110,6 @@ export default function ListaAutorretenedores({ terceros }: { terceros: Tercero[
 
     setNit(""); setNombre("");
     setGuardando(false);
-    router.refresh();
-  }
-
-  async function eliminar(nitEliminar: string) {
-    if (!confirm(`¿Quitar ${nitEliminar} de la lista de autorretenedores?`)) return;
-    await fetch(`/api/impuestos/autorretenedores/${nitEliminar}`, { method: "DELETE" });
     router.refresh();
   }
 
@@ -85,17 +156,8 @@ export default function ListaAutorretenedores({ terceros }: { terceros: Tercero[
               </tr>
             </thead>
             <tbody>
-              {terceros.map((t, i) => (
-                <tr key={t.nit} style={{ borderBottom: i < terceros.length - 1 ? "1px solid #EFEADF" : "none" }}>
-                  <td className="px-4 py-2.5 text-xs" style={{ color: "#2A2620" }}>{t.nit}</td>
-                  <td className="px-4 py-2.5 text-xs" style={{ color: "#2A2620" }}>{t.nombre ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-xs" style={{ color: "#9A9281" }}>
-                    {new Date(t.created_at).toLocaleDateString("es-CO")}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs">
-                    <button onClick={() => eliminar(t.nit)} style={{ color: "#9E4332" }}>Quitar</button>
-                  </td>
-                </tr>
+              {terceros.map((t) => (
+                <FilaTercero key={t.id} t={t} onCambio={() => router.refresh()} />
               ))}
             </tbody>
           </table>
