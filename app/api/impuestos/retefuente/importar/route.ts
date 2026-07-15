@@ -61,13 +61,17 @@ export async function POST(request: NextRequest) {
       const valorRetenido = parsearValor(fila[cRete]);
       if (!valorRetenido || valorRetenido <= 0) continue;
 
-      const { data: doc } = await supabase
+      // No usar .maybeSingle(): si el mismo CUFE quedó duplicado por un
+      // problema de sincronización anterior, .maybeSingle() falla en vez
+      // de devolver el documento. Tomamos el primero si hay varios.
+      const { data: docs } = await supabase
         .from("documentos")
         .select("id")
         .eq("cliente_id", clienteId)
         .eq("cufe", cufe)
-        .maybeSingle();
+        .limit(1);
 
+      const doc = docs?.[0];
       if (!doc) {
         omitidas.push({ cufe, motivo: "No está sincronizado en Facturación DIAN para este cliente." });
         continue;
