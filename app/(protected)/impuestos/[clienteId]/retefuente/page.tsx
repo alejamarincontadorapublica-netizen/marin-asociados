@@ -20,7 +20,7 @@ export default async function RetefuentePage({ params }: { params: Params }) {
   const documentos = await fetchTodo(supabase, (desde, hasta) =>
     supabase
       .from("documentos")
-      .select("id, tipo_documento, grupo, fecha_emision, nit_emisor, nombre_emisor, base, numero_documento")
+      .select("id, tipo_documento, clasificacion, grupo, fecha_emision, nit_emisor, nombre_emisor, base, suma, numero_documento")
       .eq("cliente_id", clienteId)
       .in("grupo", ["Recibido", "Emitido"])
       .order("id", { ascending: true })
@@ -120,6 +120,7 @@ export default async function RetefuentePage({ params }: { params: Params }) {
           retenciones={retenciones ?? []}
           conceptos={conceptos}
           uvtValor={uvtConfig?.valor?.valor ?? 0}
+          tarifaAutorrenta={cliente.tarifa_autorrenta ?? null}
         />
       )}
     </div>

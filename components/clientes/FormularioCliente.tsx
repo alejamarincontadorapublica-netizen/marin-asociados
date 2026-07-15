@@ -13,6 +13,7 @@ type Cliente = {
   cedula_rl: string;
   regimen: "ordinario" | "simple";
   ciiu: string;
+  tarifa_autorrenta: string;
   municipio: string;
   municipios_ica: string[];
   plan: "base" | "metodo_marin" | "firma_premium";
@@ -24,7 +25,7 @@ type Cliente = {
 
 const vacío: Cliente = {
   nombre: "", tipo: "empresa", nit: "", cedula: "", cedula_rl: "",
-  regimen: "ordinario", ciiu: "", municipio: "", municipios_ica: [],
+  regimen: "ordinario", ciiu: "", tarifa_autorrenta: "", municipio: "", municipios_ica: [],
   plan: "base", factura_aiu: false, porcentaje_aiu: "", periodicidad_iva: "",
   es_agente_retencion: false,
 };
@@ -104,6 +105,7 @@ export default function FormularioCliente({
       cedula_rl:      form.tipo === "empresa"  ? form.cedula_rl.trim() : null,
       regimen:        form.regimen,
       ciiu:           form.ciiu.trim() || null,
+      tarifa_autorrenta: form.tarifa_autorrenta ? parseFloat(form.tarifa_autorrenta) : null,
       municipio:      form.municipio.trim() || null,
       municipios_ica: form.municipios_ica,
       plan:           form.plan,
@@ -221,6 +223,20 @@ export default function FormularioCliente({
             <Label>Código CIIU (actividad económica)</Label>
             <Input value={form.ciiu} onChange={set("ciiu")} placeholder="Ej. 4111" />
           </div>
+        </div>
+
+        <div>
+          <Label>Tarifa de autorrenta (%)</Label>
+          <Input
+            value={form.tarifa_autorrenta}
+            onChange={set("tarifa_autorrenta")}
+            placeholder="Ej. 0.55"
+            type="number"
+          />
+          <p className="text-xs mt-1" style={{ color: "#9A9281" }}>
+            Según la actividad económica (CIIU) del cliente. Se aplica sobre la base de ventas (solo factura
+            electrónica, restando notas crédito) como anticipo mensual a la renta.
+          </p>
         </div>
 
         <div>

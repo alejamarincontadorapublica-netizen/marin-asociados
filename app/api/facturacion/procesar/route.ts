@@ -38,9 +38,10 @@ export async function POST(request: NextRequest) {
       const cIva    = col(/^iva$/i);
       // La DIAN a veces trae "BASE" y a veces "BASE IVA" — antes solo se
       // capturaba el nombre exacto "BASE" y por eso quedaba en $0 seguido.
-      const cBase   = col(/base/i);
-      const cSuma   = col(/^suma$/i);
-      const cTotal  = col(/^total$/i);
+      const cBase      = col(/base/i);
+      const cSuma      = col(/^suma$/i);
+      const cExcluidos = col(/exclu|except/i);
+      const cTotal     = col(/^total$/i);
       const cCufe   = col(/cufe|cude/i);
       const cFecha  = col(/fecha/i);
       const cNit    = col(/nit/i);
@@ -53,8 +54,11 @@ export async function POST(request: NextRequest) {
 
         const clasificacion = clasificarDocumento(tipoDoc);
         const iva    = parsearValor(cIva   ? fila[cIva]   : 0);
-        const base   = parsearValor(cBase  ? fila[cBase]  : 0);
-        const suma   = cSuma ? parsearValor(fila[cSuma]) : null;
+        const base      = parsearValor(cBase  ? fila[cBase]  : 0);
+        const excluidos = cExcluidos ? parsearValor(fila[cExcluidos]) : null;
+        // Cuando el Excel no trae "SUMA" directamente (ej. hoja de Ventas),
+        // se calcula igual: base gravada + excluido/exceptuado.
+        const suma   = cSuma ? parsearValor(fila[cSuma]) : (base || excluidos) ? base + (excluidos ?? 0) : null;
         const total  = parsearValor(cTotal ? fila[cTotal] : 0);
         const cufe   = cCufe   ? (String(fila[cCufe]  ?? "").trim() || null) : null;
         const nit    = cNit    ? (String(fila[cNit]   ?? "").trim() || null) : null;
@@ -72,6 +76,7 @@ export async function POST(request: NextRequest) {
           nombre_emisor:  nombre,
           base,
           suma,
+          excluidos,
           iva,
           total,
           clasificacion,

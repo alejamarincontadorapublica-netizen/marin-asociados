@@ -181,6 +181,7 @@ export default async function DetalleClientePage({ params }: { params: Params })
           cedula_rl:      cliente.cedula_rl ?? "",
           regimen:        cliente.regimen,
           ciiu:           cliente.ciiu ?? "",
+          tarifa_autorrenta: cliente.tarifa_autorrenta?.toString() ?? "",
           municipio:      cliente.municipio ?? "",
           municipios_ica: cliente.municipios_ica ?? [],
           plan:           cliente.plan,

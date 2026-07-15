@@ -4,15 +4,18 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generarPeriodosMensuales, esDocumentoSoporte, type ConceptoReteFuente } from "@/lib/reglas-tributarias";
 import ImportarPapelTrabajo from "./ImportarPapelTrabajo";
+import Autorrenta from "./Autorrenta";
 
 type Documento = {
   id: string;
   tipo_documento: string | null;
+  clasificacion: "FACTURA" | "NOTA_CREDITO" | "NOTA_DEBITO" | "IGNORAR";
   grupo: "Emitido" | "Recibido";
   fecha_emision: string | null;
   nit_emisor: string | null;
   nombre_emisor: string | null;
   base: number | null;
+  suma: number | null;
   numero_documento: string | null;
 };
 
@@ -136,7 +139,7 @@ function FilaPendiente({
 }
 
 export default function RetencionFuente({
-  clienteId, documentos, nitsAutorretenedores, retenciones, conceptos, uvtValor,
+  clienteId, documentos, nitsAutorretenedores, retenciones, conceptos, uvtValor, tarifaAutorrenta,
 }: {
   clienteId: string;
   documentos: Documento[];
@@ -144,6 +147,7 @@ export default function RetencionFuente({
   retenciones: Retencion[];
   conceptos: ConceptoReteFuente[];
   uvtValor: number;
+  tarifaAutorrenta: number | null;
 }) {
   const router = useRouter();
   const [anio, setAnio] = useState(anioActual);
@@ -207,6 +211,13 @@ export default function RetencionFuente({
           {excluidosAutorretenedor > 0 && ` · ${excluidosAutorretenedor} excluidos por ser autorretenedores`}
         </span>
       </div>
+
+      <Autorrenta
+        documentos={documentos}
+        periodoInicio={periodo.inicio}
+        periodoFin={periodo.fin}
+        tarifaAutorrenta={tarifaAutorrenta}
+      />
 
       <ImportarPapelTrabajo clienteId={clienteId} periodoInicio={periodo.inicio} periodoFin={periodo.fin} />
 
