@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, fetchTodo } from "@/lib/supabase-server";
 import { calcularIVA } from "@/lib/reglas-tributarias";
 
 type Params = Promise<{ clienteId: string }>;
@@ -20,13 +20,17 @@ export default async function DocumentosClientePage({ params }: { params: Params
 
   if (error || !cliente) notFound();
 
-  const { data: documentos } = await supabase
-    .from("documentos")
-    .select("*")
-    .eq("cliente_id", clienteId)
-    .order("fecha_emision", { ascending: false });
+  const documentos = await fetchTodo(supabase, (desde, hasta) =>
+    supabase
+      .from("documentos")
+      .select("*")
+      .eq("cliente_id", clienteId)
+      .order("fecha_emision", { ascending: false })
+      .order("id", { ascending: true })
+      .range(desde, hasta)
+  );
 
-  const docs = documentos ?? [];
+  const docs = documentos;
   const docsParaCalculo = docs
     .filter((d) => d.clasificacion !== "IGNORAR")
     .map((d) => ({

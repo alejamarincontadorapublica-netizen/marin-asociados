@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, fetchTodo } from "@/lib/supabase-server";
 import RetencionFuente from "@/components/impuestos/RetencionFuente";
 
 type Params = Promise<{ clienteId: string }>;
@@ -17,11 +17,15 @@ export default async function RetefuentePage({ params }: { params: Params }) {
 
   if (error || !cliente) notFound();
 
-  const { data: documentos } = await supabase
-    .from("documentos")
-    .select("id, tipo_documento, grupo, fecha_emision, nit_emisor, nombre_emisor, base, numero_documento")
-    .eq("cliente_id", clienteId)
-    .in("grupo", ["Recibido", "Emitido"]);
+  const documentos = await fetchTodo(supabase, (desde, hasta) =>
+    supabase
+      .from("documentos")
+      .select("id, tipo_documento, grupo, fecha_emision, nit_emisor, nombre_emisor, base, numero_documento")
+      .eq("cliente_id", clienteId)
+      .in("grupo", ["Recibido", "Emitido"])
+      .order("id", { ascending: true })
+      .range(desde, hasta)
+  );
 
   const { data: terceros } = await supabase
     .from("terceros_autorretenedores")
@@ -111,7 +115,7 @@ export default async function RetefuentePage({ params }: { params: Params }) {
       ) : (
         <RetencionFuente
           clienteId={clienteId}
-          documentos={documentos ?? []}
+          documentos={documentos}
           nitsAutorretenedores={(terceros ?? []).map((t) => t.nit)}
           retenciones={retenciones ?? []}
           conceptos={conceptos}

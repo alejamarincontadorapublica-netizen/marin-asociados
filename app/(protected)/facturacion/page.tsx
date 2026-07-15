@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, fetchTodo } from "@/lib/supabase-server";
 
 export default async function FacturacionPage() {
   const supabase = await createServerSupabaseClient();
@@ -9,12 +9,16 @@ export default async function FacturacionPage() {
     .select("id, nombre, tipo, nit, cedula, regimen")
     .order("nombre");
 
-  // Conteo de documentos por cliente
-  const { data: conteos } = await supabase
-    .from("documentos")
-    .select("cliente_id, grupo");
+  // Conteo de documentos por cliente (paginado — puede haber más de 1.000 en total)
+  const conteos = await fetchTodo(supabase, (desde, hasta) =>
+    supabase
+      .from("documentos")
+      .select("cliente_id, grupo")
+      .order("id", { ascending: true })
+      .range(desde, hasta)
+  );
 
-  const conteoPorCliente = (conteos ?? []).reduce<Record<string, { emitidos: number; recibidos: number }>>(
+  const conteoPorCliente = conteos.reduce<Record<string, { emitidos: number; recibidos: number }>>(
     (acc, doc) => {
       if (!acc[doc.cliente_id]) acc[doc.cliente_id] = { emitidos: 0, recibidos: 0 };
       if (doc.grupo === "Emitido")  acc[doc.cliente_id].emitidos++;

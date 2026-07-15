@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createServerSupabaseClient, fetchTodo } from "@/lib/supabase-server";
 import LiquidacionIVA from "@/components/impuestos/LiquidacionIVA";
 
 type Params = Promise<{ clienteId: string }>;
@@ -17,10 +17,14 @@ export default async function ImpuestosClientePage({ params }: { params: Params 
 
   if (error || !cliente) notFound();
 
-  const { data: documentos } = await supabase
-    .from("documentos")
-    .select("fecha_emision, iva, grupo, clasificacion, aiu_porcentaje")
-    .eq("cliente_id", clienteId);
+  const documentos = await fetchTodo(supabase, (desde, hasta) =>
+    supabase
+      .from("documentos")
+      .select("fecha_emision, iva, grupo, clasificacion, aiu_porcentaje")
+      .eq("cliente_id", clienteId)
+      .order("id", { ascending: true })
+      .range(desde, hasta)
+  );
 
   const { data: liquidaciones } = await supabase
     .from("resultados")
@@ -104,7 +108,7 @@ export default async function ImpuestosClientePage({ params }: { params: Params 
           periodicidad={cliente.periodicidad_iva}
           facturaAiu={cliente.factura_aiu ?? false}
           porcentajeAiuDefecto={cliente.porcentaje_aiu ?? 0}
-          documentos={documentos ?? []}
+          documentos={documentos}
           liquidaciones={liquidaciones ?? []}
           certificados={certificados}
         />
